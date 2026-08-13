@@ -41,6 +41,9 @@ export const hud = document.getElementById('match');
 
 export const bgm = () => playTrack(config.TRACKS.MATCH_START);
 
+export const load = () => {};
+export const unload = () => {};
+
 //-----------------------------
 
 const terrain = randomPoints(256, );

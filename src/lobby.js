@@ -14,6 +14,8 @@ const pattern = c.createPattern(perlin(), 'repeat');
 let playerDemo;
 const cyclingUnicorns = [];
 
+const mpEnabled = (window.Wavedash);
+
 export function loop(state) {
     // Init sprites
     if (!playerDemo) {
@@ -149,6 +151,33 @@ export const nav = [[document.getElementById('start-match'), match]];
 export const hud = document.getElementById('lobby');
 
 export const bgm = () => playTrack(config.TRACKS.LOBBY);
+
+export const load = (state) => {
+    if (mpEnabled) {
+        document.getElementById('name').value = state.username;
+
+        if (state.lobby) {
+            Wavedash.joinLobby(state.lobby).then(() => {
+                const users = Wavedash.getLobbyUsers(state.lobby);
+
+                console.log(users);
+            });
+        }
+        else {
+            document.getElementById('invite').style.display = 'block';
+
+            Wavedash.createLobby(Wavedash.LobbyVisibility.PRIVATE, 4).then((l) => {
+                state.lobby = l.data;
+
+                Wavedash.getLobbyInviteLink(true).then((res) =>  { document.getElementById('invite-link').innerHTML = res.data });
+            });
+        }
+    }
+}
+
+export const unload = () => {
+
+}
 
 //-----------------------------
 
