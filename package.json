@@ -1,0 +1,13 @@
+{
+    "name": "js13kproject-worms",
+    "private": true,
+    "version": "0.0.0",
+    "devDependencies": {
+        "google-closure-compiler": "^20260629.0.0"
+    },
+    "scripts": {
+        "start": "python3 -m http.server -d ./src",
+        "build": "rm -rf ./bin && mkdir ./bin && google-closure-compiler --js=src/**.js --js_output_file=bin/game.js --language_in=ECMASCRIPT_NEXT && cp ./src/index.html ./bin/index.html && cp ./src/sprite.gif ./bin/sprite.gif && zip -j -r9 game.zip ./bin/index.html ./bin/game.js ./bin/sprite.gif",
+        "publish": "npm run build && wavedash build push"
+    }
+}
