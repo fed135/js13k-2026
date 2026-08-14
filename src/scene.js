@@ -1,5 +1,4 @@
-import { a,c } from './canvas.js';
-import { perlin } from "./utils.js";
+import { a,c, perlin } from './canvas.js';
 
 const pattern = c.createPattern(perlin(), 'repeat');
 

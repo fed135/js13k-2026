@@ -1,10 +1,12 @@
 import { playTrack } from "./audio.js";
 import * as match from "./match.js";
-import { a,c, cleanCanvas } from './canvas.js';
+import { a,c, cleanCanvas, printFrame } from './canvas.js';
 import Unicorns from "./player.js";
 import config from "./config.js";
 import {sky, terrain, backdrop, mound} from "./scene.js";
 import { randomBase, hexToRgb, randomPoints, $ } from "./utils.js";
+import Rocket from './rocket.js';
+import Projectile from "./projectile.js";
 
 const FOREGROUND_OFFSET = 0.75;
 const BACKGROUND_HEIGHT = 0.45;
@@ -15,6 +17,8 @@ const cyclingUnicorns = [];
 
 const mpEnabled = (window.Wavedash);
 
+let demoRocket;
+
 export function loop(state) {
     //clear
     cleanCanvas();
@@ -24,6 +28,9 @@ export function loop(state) {
 
     // Parallax
     backdrop(parralax, BACKGROUND_HEIGHT);
+
+    demoRocket.tick(state);
+    demoRocket.render();
 
     // background
     mound(0.2, BACKGROUND_HEIGHT, FOREGROUND_OFFSET );
@@ -45,6 +52,7 @@ export function loop(state) {
         cyclingUnicorns[a].render();
     }
 
+    printFrame();
 }
 
 export const nav = [[$('start-match'), match]];
@@ -54,6 +62,9 @@ export const hud = $('lobby');
 export const bgm = () => playTrack(config.TRACKS.LOBBY);
 
 export const load = (state) => {
+    state.windDirection = 0;
+    state.windStrength = 0;
+
     if (mpEnabled) {
         $('name').value = state.username;
         $('name').disabled = true;
@@ -82,18 +93,20 @@ export const load = (state) => {
     }
 
     for (let i = 0; i < 4; i++ ) {
-        const player = new Unicorns(state.assets.unicorn, randomBase(), [255,255,255], 'Player', Unicorns.BEHAVIORS.DEMO);
+        const player = new Unicorns(randomBase(), [255,255,255], 'Player', Unicorns.BEHAVIORS.DEMO);
         player.x = a.width * (0.2 * (i + 1)) - (config.SPRITE_SIZE * config.SCALE_RATIO) / 2;
         player.y = a.height * BACKGROUND_HEIGHT - (config.SPRITE_SIZE * config.SCALE_RATIO);
         players.push(player);
     }
     
     for (let i = 0; i < UNI_COUNT; i++ ) {
-        const uni = new Unicorns(state.assets.unicorn, randomBase(), [255,255,255], '', Unicorns.BEHAVIORS.LOBBY_CYCLE);
+        const uni = new Unicorns([255,255,255], randomBase(), '', Unicorns.BEHAVIORS.LOBBY_CYCLE);
         uni.x = i * Math.round(a.width / UNI_COUNT);
         uni.y = (a.height * FOREGROUND_OFFSET) - config.TERRAIN_ROUGHNESS;
         cyclingUnicorns.push(uni);
     }
+
+    demoRocket = new Rocket(Projectile.BEHAVIORS.DEMO);
 
     // TODO: player info storage between scenes
     //state.baseColor = players[0].baseColor;
@@ -112,6 +125,7 @@ export const load = (state) => {
         // TODO: find actual player
         players[0].name = e.target.value;
     }
+
 }
 
 export const unload = () => {

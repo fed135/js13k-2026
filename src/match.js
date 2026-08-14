@@ -1,6 +1,6 @@
 import { playTrack, sfx, setVolume } from "./audio.js";
 import * as lobby from "./lobby.js";
-import { a,c,cleanCanvas } from './canvas.js';
+import { a,c,cleanCanvas, moveCamera, printFrame, resetCamera } from './canvas.js';
 import config from "./config.js";
 import {randomPoints} from "./utils.js";
 import {sky, terrain} from "./scene.js";
@@ -18,6 +18,12 @@ export function loop(state) {
         setTimeout(() => sfx(config.S.airtime, [1200, 1250], 1.9), 1100);
         setTimeout(() => sfx(config.S.detonation, [60,100], 2), 3000);
         setTimeout(() => setVolume(1), 4000);
+        setTimeout(() => {
+            moveCamera([500, 500, 800, 450], 200);
+        }, 1000);
+        setTimeout(() => {
+            resetCamera(200);
+        }, 4500);
     }
 
 
@@ -30,6 +36,8 @@ export function loop(state) {
 
     // Foreground
     terrain(foreground, FOREGROUND_OFFSET);
+
+    printFrame();
 }
 
 export const nav = [[$('return'), lobby]];

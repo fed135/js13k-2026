@@ -3,6 +3,8 @@ import { osc } from "./canvas.js";
 import config from "./config.js";
 import {a,c} from "./canvas.js";
 
+const sc = (config.SPRITE_SIZE * config.SCALE_RATIO) / 2;
+
 export default class Player {
 
     x = 0;
@@ -34,8 +36,8 @@ export default class Player {
         NEVER: 0xFFFFFFFF,
     }
 
-    constructor(sprite, baseColor, hatColor, name, behavior) {
-        this.sprite = osc(sprite.width, sprite.height);
+    constructor(baseColor, hatColor, name, behavior) {
+        this.sprite = osc(window.assets.unicorn.width, window.assets.unicorn.height);
         this.baseColor = baseColor;
         this.hatColor = hatColor;
         this.name = name;
@@ -44,7 +46,7 @@ export default class Player {
         this.state = null;
     
         // duplicate canvas
-        this.sprite[1].drawImage(sprite, 0, 0);
+        this.sprite[1].drawImage(window.assets.unicorn, 0, 0);
 
         // draw baseColor
         this.recolor([255,0,0], this.baseColor);
@@ -96,7 +98,7 @@ export default class Player {
                 break;
             case Player.BEHAVIORS.DEMO:
                 this.changeState(Player.STATES.IDLE);
-                this.face = -1;
+                
                 /*if (state.hatColor.join() !== this.hatColor.join()) {
                     this.recolor(this.hatColor, state.hatColor);
                     this.hatColor = state.hatColor;
@@ -105,7 +107,11 @@ export default class Player {
             case Player.BEHAVIORS.LOBBY_CYCLE:
                 // set to walking, advance on terrain
                 this.changeState(Player.STATES.WALKING);
-                this.y = state.terrain[Math.floor(((this.x + (config.SPRITE_SIZE * config.SCALE_RATIO) / 2) / a.width) * state.terrain.length)] - (config.SPRITE_SIZE * config.SCALE_RATIO);
+                this.face = -1;
+
+                const clampedX = Math.max(0, Math.min(a.width, this.x + sc));
+                const index = Math.min(state.terrain.length - 1, Math.floor((clampedX / a.width) * state.terrain.length));
+                this.y = state.terrain[index] - (config.SPRITE_SIZE * config.SCALE_RATIO);
                 this.x += rand(1.4, 1.5);
                 if (this.x > a.width + (config.SPRITE_SIZE * config.SCALE_RATIO)) this.x = -(config.SPRITE_SIZE * config.SCALE_RATIO)
                 break;
@@ -117,19 +123,21 @@ export default class Player {
     }
 
     render() {
+        const size = config.SPRITE_SIZE * config.SCALE_RATIO;
+        const cx = this.x + size / 2;
+        const cy = this.y + size / 2;
+
         c.save();
-        c.translate(a.width * 0.5, 0);
-        c.scale(this.face,1);
-        c.translate(-a.width * 0.5, 0);
-            
+        c.translate(cx, cy);
+        c.scale(this.face, 1);
         c.drawImage(
             this.sprite[0],
             this.frameOffset[0] * config.SPRITE_SIZE,
             this.frameOffset[1] * config.SPRITE_SIZE,
             config.SPRITE_SIZE,
             config.SPRITE_SIZE,
-            this.x,
-            this.y,
+            -size / 2,
+            -size / 2,
             config.SPRITE_SIZE * config.SCALE_RATIO,
             config.SPRITE_SIZE * config.SCALE_RATIO
         );

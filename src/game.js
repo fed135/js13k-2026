@@ -4,10 +4,14 @@ import * as lobby from "./lobby.js";
 import { announcer, stopBGM } from "./audio.js";
 import {loadAtlas} from "./loader.js";
 
-const state = {t:0};
+const state = {t:0, gravity: 1};
 (async () => {
-    state.assets = await loadAtlas('./sprite.gif', {
+    window.assets = await loadAtlas('./sprite.gif', {
         unicorn: { x: 0, y: 0, w: 128, h: 64 },
+        rocket: {x:0, y: 64, w: 32, h: 32 },
+        star: {x:32, y: 64, w:32, h:32},
+        grenade: {x:64, y: 64, w:32, h: 32},
+        bullet: {x:96, y: 64, w:32, h: 32},
     });
 })();
 
@@ -29,7 +33,7 @@ function navigate(toScene) {
     window.currentScene?.unload(state);
 
     state.t = 0;
-    announcer("Say the line Bart!");
+    //announcer("Say the line Bart!");
 
     // Reset input handlers
 
