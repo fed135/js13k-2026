@@ -1,13 +1,13 @@
 import * as lobby from "./lobby.js";
-
+import {$,show,hide} from "./utils.js";
 
 export function loop() {
 
 }
 
-export const nav = [[document.getElementById('title'), lobby], [document.getElementById('join'), lobby]];
+export const nav = [[$('title'), lobby], [$('join'), lobby]];
 
-export const hud = document.getElementById('title');
+export const hud = $('title');
 
 export const bgm = () => {};
 export const load = (state) => {
@@ -18,17 +18,16 @@ export const load = (state) => {
         // Join MP session if in params
         const params = Wavedash.getLaunchParams();
         if (params.lobby) {
-            document.getElementById('accept-invite').style.display = 'block';
+            show($('accept-invite'));
             state.lobby = params.lobby;
         }
     }
 
-    console.log('setting event...')
-    document.getElementById('decline').addEventListener('click', (e) => {
+    $('decline').addEventListener('click', (e) => {
         state.lobby = null;
-        document.getElementById('accept-invite').style.display = 'none';
+        hide($('accept-invite'));
     });
 };
 export const unload = () => {
-    document.getElementById('accept-invite').style.display = 'none';
+    hide($('accept-invite'));
 };

@@ -11,6 +11,9 @@ export function cleanCanvas() {
     a.width = config.GAME_WIDTH;
     a.height = config.GAME_HEIGHT;
     ctx.imageSmoothingEnabled = false;
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'square';
 }
 
 export function osc(w, h) {

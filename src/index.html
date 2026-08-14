@@ -44,6 +44,32 @@
         canvas { image-rendering: pixelated; position: absolute; top: 0; left: 0; width: 1600px; height: 900px; display: block;}
 
         #game-over { display: none;}
+
+        .mini-toast {
+            display: none;
+            position: absolute;
+            bottom: 120%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,200,0,0.7);
+            color: #fff;
+            padding: 16px 0px;
+            border-radius: 4px;
+            font: 18px sans-serif;
+            font-weight: bold;
+            text-align: center;
+            width: 100%;
+            white-space: nowrap;
+            animation: toast 3s forwards;
+
+            }
+
+            @keyframes toast {
+                0%   { opacity: 0; transform: translate(-50%, 5px); }
+                10%  { opacity: 1; transform: translate(-50%, 0); }
+                85%  { opacity: 1; transform: translate(-50%, 0); }
+                100% { opacity: 0; transform: translate(-50%, -5px); }
+            }
     </style>
 </head>
 <body>
@@ -72,7 +98,7 @@
             <h2>CUSTOMIZE YOUR HERO</h2>
             <div class="i-g">
             <label for="name">NAME:</label>
-            <input id="name" value="Player" autofocus required placeholder="Type a name!"/>
+            <input id="name" value="Player" autofocus required placeholder="Type a name!" oninput="window.updateName(event)"/>
             </div>
 
             <div class="i-g">
@@ -97,6 +123,7 @@
             <h2>INVITE YOUR FRIENDS</h2>
             <input type="hidden" id="invite-link"></pre>
             <button id="copy-link">COPY INVITE LINK</button>
+            <div class="mini-toast" onanimationend="this.style.display='none'">COPIED!</div>
         </div>
         <button id="start-match">START MATCH</button>
     </div>

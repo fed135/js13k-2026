@@ -3,6 +3,9 @@ import * as lobby from "./lobby.js";
 import { a,c,cleanCanvas } from './canvas.js';
 import config from "./config.js";
 import {randomPoints} from "./utils.js";
+import {sky, terrain} from "./scene.js";
+import {$,show,hide} from "./utils.js";
+
 
 const FOREGROUND_OFFSET = 0.75;
 
@@ -20,24 +23,18 @@ export function loop(state) {
 
     //clear
     cleanCanvas();
-    state.terrain = terrain;
+    state.terrain = foreground;
 
     //sky
-    const gradient = c.createRadialGradient(state.t * 0.2, 90, 30, state.t * 0.2, 100, a.width);
-    
-    gradient.addColorStop(0, "#FAFAD2");
-    gradient.addColorStop(0.05, "white");
-    gradient.addColorStop(0.25, "#F0FFFF");
-    gradient.addColorStop(0.5, "#87CEFA");
-    gradient.addColorStop(1, "#191970");
-    
-    c.fillStyle = gradient;
-    c.fillRect(0,0,a.width, a.height);
+    sky(state.t);
+
+    // Foreground
+    terrain(foreground, FOREGROUND_OFFSET);
 }
 
-export const nav = [[document.getElementById('return'), lobby]];
+export const nav = [[$('return'), lobby]];
 
-export const hud = document.getElementById('match');
+export const hud = $('match');
 
 export const bgm = () => playTrack(config.TRACKS.MATCH_START);
 
@@ -46,4 +43,4 @@ export const unload = () => {};
 
 //-----------------------------
 
-const terrain = randomPoints(256, );
+const foreground = randomPoints(128, Math.round(a.height * FOREGROUND_OFFSET), 0.5, config.TERRAIN_ROUGHNESS);

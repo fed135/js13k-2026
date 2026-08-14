@@ -118,3 +118,15 @@ export function randomPoints(amount, startingValue, variation, roughness, min, m
     }
     return points;
 }
+
+export function $(id) {
+  return document.getElementById(id);
+}
+
+export function hide(element) {
+  element.style.display = 'none';
+}
+
+export function show(element) {
+  element.style.display = 'block';
+}

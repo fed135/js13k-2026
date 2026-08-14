@@ -97,10 +97,10 @@ export default class Player {
             case Player.BEHAVIORS.DEMO:
                 this.changeState(Player.STATES.IDLE);
                 this.face = -1;
-                if (state.hatColor.join() !== this.hatColor.join()) {
+                /*if (state.hatColor.join() !== this.hatColor.join()) {
                     this.recolor(this.hatColor, state.hatColor);
                     this.hatColor = state.hatColor;
-                }
+                }*/
                 break;
             case Player.BEHAVIORS.LOBBY_CYCLE:
                 // set to walking, advance on terrain
@@ -134,5 +134,9 @@ export default class Player {
             config.SPRITE_SIZE * config.SCALE_RATIO
         );
         c.restore();
+
+        // Display name (should probably render once in an osc)
+        c.textAlign = 'center';
+        c.fillText(this.name, this.x + (config.SPRITE_SIZE * config.SCALE_RATIO) /2, this.y - 16);
     }
 }
