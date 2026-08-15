@@ -12,6 +12,8 @@ export default class Player {
     face = 1;
     animationOffset = Math.floor(Math.random() *4);
     frameOffset = [0,0]
+    speed = 0;
+    angle = 45;
 
     static BEHAVIORS = {
         DEMO: 0,
@@ -54,6 +56,20 @@ export default class Player {
     }
 
     tick() {
+        // Check falling
+        if (this.behavior !== Player.BEHAVIORS.DEMO) {
+            const clampedX = Math.max(0, Math.min(a.width, this.x + sc));
+            const index = Math.min(state.terrain.length - 1, Math.floor((clampedX / a.width) * state.terrain.length));
+            if (this.y < state.terrain[index] - (config.SPRITE_SIZE * config.SCALE_RATIO)) {
+                if (this.behavior !== Player.BEHAVIORS.LOBBY_CYCLE) {
+                    this.falling = true;
+                    this.y += 7;
+                    return;
+                }
+            }
+            this.y = state.terrain[index] - (config.SPRITE_SIZE * config.SCALE_RATIO);
+        }
+
         // Logic
         this.checkBehavior();
         
@@ -109,9 +125,6 @@ export default class Player {
                 this.changeState(Player.STATES.WALKING);
                 this.face = -1;
 
-                const clampedX = Math.max(0, Math.min(a.width, this.x + sc));
-                const index = Math.min(state.terrain.length - 1, Math.floor((clampedX / a.width) * state.terrain.length));
-                this.y = state.terrain[index] - (config.SPRITE_SIZE * config.SCALE_RATIO);
                 this.x += rand(1.4, 1.5);
                 if (this.x > a.width + (config.SPRITE_SIZE * config.SCALE_RATIO)) this.x = -(config.SPRITE_SIZE * config.SCALE_RATIO)
                 break;

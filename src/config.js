@@ -16,6 +16,9 @@ export default {
     SCALE_RATIO: 4,
     GAME_WIDTH: 1600,
     GAME_HEIGHT: 900,
+    MAX_MATCH_DURATION: 40,
+    TURN_DURATION: 15000,
+    FUEL_PER_TURN: 60,
 
     TRACKS: {
         LOBBY: [120, 4, 4, 64,

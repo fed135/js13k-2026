@@ -3,10 +3,8 @@ import { lerp } from "./utils.js";
 import {c} from './canvas.js';
 
 const rainbowColors = [[255,255,85], [85,255,255], [255,85,255]];
-let t = 0;
-let direction = 1;
 
-function rainbowLerp() {
+function rainbowLerp(t, direction) {
     let r, g, b;
     if (t < 0.5) {
     // Phase 1: Scale progress from [0, 0.5] to [0, 1]
@@ -28,14 +26,17 @@ function rainbowLerp() {
 export default class Rainbow extends Projectile {
     constructor(behavior) {
         super(window.assets.star, [255,255,255], 100, 400, 100, 40, behavior);
+
+        this.tOffset = Math.random();
+        this.direction = 1;
     }
 
     tick() {
-        t += 0.005 * direction;
-        if (t >= 1 || t <= 0) {
-            direction *= -1;
+        this.tOffset += 0.005 * this.direction;
+        if (this.tOffset >= 1 || this.tOffset <= 0) {
+            this.direction *= -1;
         }
-        this.tailColor = rainbowLerp();
+        this.tailColor = rainbowLerp(this.tOffset, this.direction);
 
         super.tick();
     }

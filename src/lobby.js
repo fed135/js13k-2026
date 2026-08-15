@@ -12,12 +12,13 @@ const FOREGROUND_OFFSET = 0.75;
 const BACKGROUND_HEIGHT = 0.45;
 const UNI_COUNT = 32;
 
-let players = [];
 const cyclingUnicorns = [];
 
 const mpEnabled = (window.Wavedash);
 
-let demoRocket;
+let uniNames = ['Player', 'BOT Dolly', 'BOT Jolly', 'BOT Denis'];
+
+let demoRockets = [];
 
 export function loop() {
     //clear
@@ -29,8 +30,10 @@ export function loop() {
     // Parallax
     backdrop(parralax, BACKGROUND_HEIGHT);
 
-    demoRocket.tick();
-    demoRocket.render();
+    demoRockets.forEach((d) => {
+        d.tick();
+        d.render();
+    });
 
     // background
     mound(0.2, BACKGROUND_HEIGHT, FOREGROUND_OFFSET );
@@ -42,15 +45,15 @@ export function loop() {
     terrain(foreground, FOREGROUND_OFFSET);
 
     // Player demo
-    players.forEach((p) => {
+    state.players.forEach((p) => {
         p.tick();
         p.render();
     });
 
-    for (let a = 0; a < cyclingUnicorns.length; a++) {
-        cyclingUnicorns[a].tick();
-        cyclingUnicorns[a].render();
-    }
+    cyclingUnicorns.forEach((u) => {
+        u.tick();
+        u.render();
+    });
 
     printFrame();
 }
@@ -64,6 +67,7 @@ export const bgm = () => playTrack(config.TRACKS.LOBBY);
 export const load = () => {
     state.windDirection = 0;
     state.windStrength = 0;
+    state.players = [];
 
     if (mpEnabled) {
         $('name').value = state.username;
@@ -73,7 +77,18 @@ export const load = () => {
             Wavedash.joinLobby(state.lobby).then(() => {
                 const users = Wavedash.getLobbyUsers(state.lobby);
 
-                console.log(users);
+                hide($('picker'));
+                hide($('start-match'));
+                users.forEach((u, i) => {
+                    state.players[i].name = u.username;
+                    state.players[i].id = u.userId; // If no id, it's a BOT.
+                });
+
+                const message = Wavedash.readP2PMessageFromChannel(0);
+                if (message) {
+                    console.log(`From: ${message.fromUserId}, Data: ${message.payload}`);
+                    navigateScene(match);
+                }
             });
         }
         else {
@@ -90,13 +105,18 @@ export const load = () => {
                 e.target.nextElementSibling.style.display='block';
            });
         }
+
+        $('start-match').addEventListener((e) => {
+            Wavedash.broadcastP2PMessage(0, true, new Uint8Array([1, 2, 3]));
+        });
     }
 
     for (let i = 0; i < 4; i++ ) {
-        const player = new Unicorns(randomBase(), [255,255,255], 'Player', Unicorns.BEHAVIORS.DEMO);
+        const player = new Unicorns(randomBase(), [255,255,255], uniNames[i], Unicorns.BEHAVIORS.DEMO);
         player.x = a.width * (0.2 * (i + 1)) - (config.SPRITE_SIZE * config.SCALE_RATIO) / 2;
         player.y = a.height * BACKGROUND_HEIGHT - (config.SPRITE_SIZE * config.SCALE_RATIO);
-        players.push(player);
+        if (!mpEnabled && i === 0) player.id = 1;
+        state.players.push(player);
     }
     
     for (let i = 0; i < UNI_COUNT; i++ ) {
@@ -106,7 +126,9 @@ export const load = () => {
         cyclingUnicorns.push(uni);
     }
 
-    demoRocket = new Rainbow(Projectile.BEHAVIORS.DEMO);
+    for (let i = 0; i < 8; i++ ) {
+        demoRockets.push(new Rainbow(Projectile.BEHAVIORS.DEMO));
+    }
 
     // TODO: player info storage between scenes
     //state.baseColor = players[0].baseColor;
@@ -117,13 +139,13 @@ export const load = () => {
         // Prevent full black
         if (c.join() === '0,0,0') c = [1,0,0];
 
-        players[0].recolor(players[0].hatColor, c);
-        players[0].hatColor = c;
+        state.players[0].recolor(state.players[0].hatColor, c);
+        state.players[0].hatColor = c;
     }
 
     window.updateName = (e) => {
         // TODO: find actual player
-        players[0].name = e.target.value;
+        state.players[0].name = e.target.value;
     }
 
 }

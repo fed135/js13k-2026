@@ -88,5 +88,5 @@ export function updateBallistic(target, windDirection, windStrength, gravity) {
   target.y += target.vy * dt;
   
   target.angle = Math.atan2(target.vx, -target.vy) * 180 / Math.PI;
-  //this.distanceTraveled = Math.hypot(this.x - this.originalX, this.y - this.originalY);
+  //target.distanceTraveled = Math.hypot(this.x - this.originalX, this.y - this.originalY); // Could be interesting to calculate bonus damage based on airtime
 }

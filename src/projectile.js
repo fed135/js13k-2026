@@ -8,9 +8,9 @@ export default class Projectile {
     static STATES= {
         ready: 0,
         airtime: 1,
-        detonation: 2,
         fallout: 3,
         aim: 4,
+        done: 5
     }
 
     static BEHAVIORS = {
@@ -45,7 +45,6 @@ export default class Projectile {
     }
 
     fire(x, y, angle, speed) {
-        console.log('FIRE!', x, y, angle, speed)
         this.x = x;
         this.y = y;
         this.state = Projectile.STATES.airtime;
@@ -57,12 +56,22 @@ export default class Projectile {
     }
 
     detonate() {
-        this.state = Projectile.STATES.detonation;
+        this.state = Projectile.STATES.fallout;
+
+        if (this.behavior !== Projectile.BEHAVIORS.DEMO) {
+            const clampedX = Math.max(0, Math.min(a.width, this.x + sc));
+
+            // Apply reduction to surrounding terrain as well
+            state.terrain[Math.floor((clampedX / a.width) * state.terrain.length -1)] += (this.falloff * 0.5)
+        }
+        
     }
 
     tick() {
         if (this.behavior === Projectile.BEHAVIORS.DEMO && this.state === Projectile.STATES.ready) {
-            this.fire(0, 400, rand(10, 50), rand(20, 40));
+            this.state = Projectile.STATES.aim;
+            setTimeout(() => this.fire(0, 400, rand(30, 50), rand(25, 35)), rand(1000,5000));
+            
         }
 
 
@@ -78,10 +87,9 @@ export default class Projectile {
             if (this.y > state.terrain[Math.floor((clampedX / a.width) * state.terrain.length -1)] - (config.SPRITE_SIZE * config.SCALE_RATIO)) return this.detonate();
         }
 
-        if (this.state === Projectile.STATES.detonation) {
-            this.state = Projectile.STATES.fallout;
-            if (this.behavior === Projectile.BEHAVIORS.DEMO) {
-                setTimeout(() => this.state = Projectile.STATES.ready, rand(1000,5000));
+        if (this.state === Projectile.STATES.fallout) {
+            if (this.tail.length === 0) {
+                this.state = this.behavior === Projectile.BEHAVIORS.DEMO ? Projectile.STATES.ready : Projectile.STATES.done;
             }
         }
     }
@@ -112,9 +120,11 @@ export default class Projectile {
 
                 break;
             case Projectile.STATES.aim:
-                c.moveTo(cx, cy);
-                c.arcTo();
-
+                if (this.behavior !== Projectile.BEHAVIORS.DEMO) {
+                    c.moveTo(cx, cy);
+                    c.arcTo();
+                }
+                break;
             case Projectile.STATES.fallout: 
                 c.beginPath();
                 c.arc(cx, cy, this.behavior === Projectile.BEHAVIORS.DEMO ? this.falloff * 4 : this.falloff, 0, 2 * Math.PI);
@@ -129,6 +139,7 @@ export default class Projectile {
                 c.restore();
                 
                 this.tail.shift();
+                break;
         }
 
         c.strokeStyle = 'black';

@@ -14,6 +14,7 @@ export const load = () => {
     if (window.Wavedash) {
         // Set user info in the game state
         state.username = Wavedash.getUsername();
+        state.id = Wavedash.getUserId();
 
         // Join MP session if in params
         const params = Wavedash.getLaunchParams();

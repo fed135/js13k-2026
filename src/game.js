@@ -24,12 +24,12 @@ setInterval(() => {
 [title, lobby, match].forEach((s, i) => {
     s.nav.forEach((n, u) => {
         n[0].addEventListener('click', (e) => {
-            navigate(n[1]);
+            navigateScene(n[1]);
         });
     });
 });
 
-function navigate(toScene) {
+window.navigateScene = (toScene) => {
     window.currentScene?.unload();
 
     state.t = 0;
@@ -55,7 +55,7 @@ function navigate(toScene) {
     window.currentScene = toScene;
 }
 
-navigate(title);
+navigateScene(title);
 
 if (window.Wavedash !== undefined) {
     Wavedash.init();
