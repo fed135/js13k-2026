@@ -17,6 +17,8 @@ export function sky(t) {
 }
 
 export function terrain(points, offset) {
+    c.strokeStyle = "black";
+    c.lineWidth = 6;
     c.beginPath();
     c.moveTo(0, Math.round(a.height * offset));
     for (let t = 0; t < points.length; t++) {
@@ -67,6 +69,8 @@ export function backdrop(parralax, height) {
 }
 
 export function mound(offsetX, offsetY, height) {
+    c.strokeStyle = "black";
+    c.lineWidth = 6;
     c.beginPath();
     c.moveTo(Math.round(a.width * offsetX) - 600, a.height);
     c.lineTo(Math.round(a.width * offsetX) - 250, Math.round(a.height * offsetY) + 100);

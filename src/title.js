@@ -10,7 +10,7 @@ export const nav = [[$('title'), lobby], [$('join'), lobby]];
 export const hud = $('title');
 
 export const bgm = () => {};
-export const load = (state) => {
+export const load = () => {
     if (window.Wavedash) {
         // Set user info in the game state
         state.username = Wavedash.getUsername();

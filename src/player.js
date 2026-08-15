@@ -53,9 +53,9 @@ export default class Player {
         this.recolor([255,255,255], this.hatColor);
     }
 
-    tick(state) {
+    tick() {
         // Logic
-        this.checkBehavior(state);
+        this.checkBehavior();
         
         // Animations
         switch(this.state) {
@@ -91,7 +91,7 @@ export default class Player {
         if (this.frameOffset[0] > 3) this.frameOffset[0] = 0;
     }
 
-    checkBehavior(state) {
+    checkBehavior() {
         switch(this.behavior) {
             case Player.BEHAVIORS.BOT:
                 // Check match state, is it our turn ?

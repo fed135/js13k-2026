@@ -2,7 +2,6 @@ import { osc,a,c } from "./canvas.js";
 import config from "./config.js";
 import { rand, updateBallistic } from "./utils.js";
 
-const dt = 1/6;
 const sc = (config.SPRITE_SIZE * config.SCALE_RATIO) / 2;
 
 export default class Projectile {
@@ -10,7 +9,7 @@ export default class Projectile {
         ready: 0,
         airtime: 1,
         detonation: 2,
-        stop: 3,
+        fallout: 3,
         aim: 4,
     }
 
@@ -54,19 +53,22 @@ export default class Projectile {
         this.angle = angle * Math.PI / 180;
         this.vx = Math.cos(this.angle) * speed;
         this.vy = -Math.sin(this.angle) * speed;
+        this.tail = [];
     }
 
     detonate() {
         this.state = Projectile.STATES.detonation;
     }
 
-    tick(state) {
+    tick() {
         if (this.behavior === Projectile.BEHAVIORS.DEMO && this.state === Projectile.STATES.ready) {
             this.fire(0, 400, rand(10, 50), rand(20, 40));
         }
 
 
         if (this.state === Projectile.STATES.airtime) {
+            this.tail.push([this.x, this.y]);
+            if (this.tail.length > this.tailLength) this.tail.shift();
 
             updateBallistic(this, state.windDirection, state.windStrength, state.gravity);
 
@@ -77,35 +79,78 @@ export default class Projectile {
         }
 
         if (this.state === Projectile.STATES.detonation) {
-            console.log('boom');
+            this.state = Projectile.STATES.fallout;
             if (this.behavior === Projectile.BEHAVIORS.DEMO) {
-                this.state = Projectile.STATES.stop;
                 setTimeout(() => this.state = Projectile.STATES.ready, rand(1000,5000));
             }
         }
     }
 
     render() {
+        const size = config.SPRITE_SIZE * config.SCALE_RATIO;
+        const cx = this.x + size / 2;
+        const cy = this.y + size / 2;
+
+        // tail
+        c.moveTo(cx, cy);
+        for (let t = 0; t < this.tail.length; t++) {
+            c.beginPath();
+            c.strokeStyle = `rgba(${this.tailColor.join()}, ${1 / (this.tail.length - t)})`;
+            c.lineTo(this.tail[t][0] + size / 2, this.tail[t][1] + size / 2);
+            c.stroke();
+        }
+
         switch(this.state) {
             case Projectile.STATES.airtime:
+                
                 // head
-                const size = config.SPRITE_SIZE * config.SCALE_RATIO;
-                const cx = this.x + size / 2;
-                const cy = this.y + size / 2;
-
                 c.save();
                 c.translate(cx, cy);
                 c.rotate(this.angle * Math.PI / 180);
                 c.drawImage(this.sprite[0], -size / 2, -size / 2, size, size);
                 c.restore();
 
-                // tail
+                break;
+            case Projectile.STATES.aim:
+                c.moveTo(cx, cy);
+                c.arcTo();
+
+            case Projectile.STATES.fallout: 
+                c.beginPath();
+                c.arc(cx, cy, this.behavior === Projectile.BEHAVIORS.DEMO ? this.falloff * 4 : this.falloff, 0, 2 * Math.PI);
+                const explosionRadial = c.createRadialGradient(cx, cy, 1, cx, cy, this.behavior === Projectile.BEHAVIORS.DEMO ? this.falloff * 4 : this.falloff);
+                explosionRadial.addColorStop(0, `rgba(${this.tailColor.join()}, 0.8)`);
+                explosionRadial.addColorStop(1, `rgba(${this.tailColor.join()}, 0.01)`);
+                c.fillStyle = explosionRadial;
+
+                c.save();
+                c.globalAlpha =  (this.tail.length / this.tailLength);
+                c.fill();
+                c.restore();
+                
+                this.tail.shift();
         }
+
+        c.strokeStyle = 'black';
     }
 
     _flightTime(angle, speed) {
-        const maxSteps = 1000;
+        const maxSteps = 10000;
         let steps = 0;
+        let test = {x: this.x, y: this.y, weight: this.weight};
+        test.angle = angle * Math.PI / 180;
+        test.vx = Math.cos(test.angle) * speed;
+        test.vy = -Math.sin(test.angle) * speed;
 
+        for (;steps < maxSteps; steps++) {
+            updateBallistic(test, state.windDirection, state.windStrength, state.gravity);
+
+            const clampedX = Math.max(0, Math.min(a.width, test.x + sc));
+            const index = Math.min(state.terrain.length - 1, Math.floor((clampedX / a.width) * state.terrain.length));
+            if (test.y > state.terrain[index] - (config.SPRITE_SIZE * config.SCALE_RATIO)) {
+                return steps;
+            }
+        }
+        return maxSteps;
     }
 }

@@ -4,7 +4,7 @@ import * as lobby from "./lobby.js";
 import { announcer, stopBGM } from "./audio.js";
 import {loadAtlas} from "./loader.js";
 
-const state = {t:0, gravity: 1};
+window.state = {t:0, gravity: 1};
 (async () => {
     window.assets = await loadAtlas('./sprite.gif', {
         unicorn: { x: 0, y: 0, w: 128, h: 64 },
@@ -18,7 +18,7 @@ const state = {t:0, gravity: 1};
 setInterval(() => {
     state.t++;
     if (state.t > 0xffffff) state.t = 0;
-    window.currentScene?.loop(state);
+    window.currentScene?.loop();
 }, 16);
 
 [title, lobby, match].forEach((s, i) => {
@@ -30,7 +30,7 @@ setInterval(() => {
 });
 
 function navigate(toScene) {
-    window.currentScene?.unload(state);
+    window.currentScene?.unload();
 
     state.t = 0;
     //announcer("Say the line Bart!");
@@ -45,7 +45,7 @@ function navigate(toScene) {
     toScene.hud.style.display = "block";
     toScene.hud.style.opacity = 1;
 
-    toScene.load(state);
+    toScene.load();
 
     // Play track
     stopBGM();

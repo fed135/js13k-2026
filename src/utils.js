@@ -76,6 +76,7 @@ export function lerp(start, end, t) {
 }
 
 export function updateBallistic(target, windDirection, windStrength, gravity) {
+  const dt = 1/6;
   const windRad = windDirection * Math.PI / 180;
   const windAccelX = (Math.cos(windRad) * windStrength) / target.weight;
   const windAccelY = (Math.sin(windRad) * windStrength) / target.weight;

@@ -5,7 +5,7 @@ import Unicorns from "./player.js";
 import config from "./config.js";
 import {sky, terrain, backdrop, mound} from "./scene.js";
 import { randomBase, hexToRgb, randomPoints, $ } from "./utils.js";
-import Rocket from './rocket.js';
+import Rainbow from './rainbow.js';
 import Projectile from "./projectile.js";
 
 const FOREGROUND_OFFSET = 0.75;
@@ -19,7 +19,7 @@ const mpEnabled = (window.Wavedash);
 
 let demoRocket;
 
-export function loop(state) {
+export function loop() {
     //clear
     cleanCanvas();
     state.terrain = foreground;
@@ -29,7 +29,7 @@ export function loop(state) {
     // Parallax
     backdrop(parralax, BACKGROUND_HEIGHT);
 
-    demoRocket.tick(state);
+    demoRocket.tick();
     demoRocket.render();
 
     // background
@@ -43,12 +43,12 @@ export function loop(state) {
 
     // Player demo
     players.forEach((p) => {
-        p.tick(state);
+        p.tick();
         p.render();
     });
 
     for (let a = 0; a < cyclingUnicorns.length; a++) {
-        cyclingUnicorns[a].tick(state);
+        cyclingUnicorns[a].tick();
         cyclingUnicorns[a].render();
     }
 
@@ -61,7 +61,7 @@ export const hud = $('lobby');
 
 export const bgm = () => playTrack(config.TRACKS.LOBBY);
 
-export const load = (state) => {
+export const load = () => {
     state.windDirection = 0;
     state.windStrength = 0;
 
@@ -106,7 +106,7 @@ export const load = (state) => {
         cyclingUnicorns.push(uni);
     }
 
-    demoRocket = new Rocket(Projectile.BEHAVIORS.DEMO);
+    demoRocket = new Rainbow(Projectile.BEHAVIORS.DEMO);
 
     // TODO: player info storage between scenes
     //state.baseColor = players[0].baseColor;

@@ -21,8 +21,6 @@ export function cleanCanvas(cameraOnly) {
     ctx.imageSmoothingEnabled = false;
 
     cameraCtx.imageSmoothingEnabled = false;
-    cameraCtx.strokeStyle = "black";
-    cameraCtx.lineWidth = 6;
     cameraCtx.lineCap = 'square';
 }
 

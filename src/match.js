@@ -5,27 +5,22 @@ import config from "./config.js";
 import {randomPoints} from "./utils.js";
 import {sky, terrain} from "./scene.js";
 import {$,show,hide} from "./utils.js";
+import Rocket from "./rocket.js";
+import Projectile from "./projectile.js";
+import Rainbow from "./rainbow.js";
 
 
 const FOREGROUND_OFFSET = 0.75;
 
-export function loop(state) {
+let missile;
+
+export function loop() {
     if (state.gameTimer == undefined) {
         state.gameTimer = 0;
+        missile = new Rainbow(Projectile.BEHAVIORS.PLAYER);
 
-        setTimeout(() => setVolume(.1), 500);
-        setTimeout(() => sfx(config.S.shot, [1200, 1250], 0.1), 1000);
-        setTimeout(() => sfx(config.S.airtime, [1200, 1250], 1.9), 1100);
-        setTimeout(() => sfx(config.S.detonation, [60,100], 2), 3000);
-        setTimeout(() => setVolume(1), 4000);
-        setTimeout(() => {
-            moveCamera([500, 500, 800, 450], 200);
-        }, 1000);
-        setTimeout(() => {
-            resetCamera(200);
-        }, 4500);
+        setTimeout(() => missile.fire(0, 400, 45, 30), 1000);
     }
-
 
     //clear
     cleanCanvas();
@@ -36,6 +31,11 @@ export function loop(state) {
 
     // Foreground
     terrain(foreground, FOREGROUND_OFFSET);
+
+    missile.tick();
+    missile.render();
+
+    moveCamera([missile.x, missile.y, 800, 450], 200);
 
     printFrame();
 }
