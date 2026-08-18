@@ -25,7 +25,7 @@ function rainbowLerp(t, direction) {
 
 export default class Rainbow extends Projectile {
     constructor(behavior) {
-        super(window.assets.star, [255,255,255], 100, 400, 100, 40, behavior);
+        super(window.assets.star, [255,255,255], 100, 80, 100, 40, behavior);
 
         this.tOffset = Math.random();
         this.direction = 1;

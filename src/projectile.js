@@ -1,6 +1,8 @@
 import { osc,a,c } from "./canvas.js";
 import config from "./config.js";
-import { rand, updateBallistic } from "./utils.js";
+import { rand, updateBallistic, distance } from "./utils.js";
+import { sfx, setVolume } from "./audio.js";
+
 
 const sc = (config.SPRITE_SIZE * config.SCALE_RATIO) / 2;
 
@@ -46,23 +48,44 @@ export default class Projectile {
 
     fire(x, y, angle, speed) {
         this.x = x;
-        this.y = y;
+        this.y = y - sc;
+
         this.state = Projectile.STATES.airtime;
         //this.momentum = this.weight * speed;
-        this.angle = angle * Math.PI / 180;
+        this.angle = (angle < 0 ? angle + 180 : angle) * Math.PI / 180;
         this.vx = Math.cos(this.angle) * speed;
         this.vy = -Math.sin(this.angle) * speed;
         this.tail = [];
+
+        if (this.behavior !== Projectile.BEHAVIORS.DEMO) {
+            setVolume(0.1);
+            sfx(config.S.shot, [1200, 1250], 0.1);
+        
+            const airtime = this._flightTime(angle, speed);
+            sfx(config.S.airtime, [1200, 1250], airtime/100);
+        }
     }
 
-    detonate() {
+    detonate(offset) {
         this.state = Projectile.STATES.fallout;
 
         if (this.behavior !== Projectile.BEHAVIORS.DEMO) {
-            const clampedX = Math.max(0, Math.min(a.width, this.x + sc));
-
-            // Apply reduction to surrounding terrain as well
-            state.terrain[Math.floor((clampedX / a.width) * state.terrain.length -1)] += (this.falloff * 0.5)
+            state.terrain.crater(this.x + sc, this.falloff, offset);
+            sfx(config.S.detonation, [60,100], 2);
+            setTimeout(() => setVolume(1), 4);
+        
+        
+            // Apply damage
+            state.players.forEach((p) => {
+                if (p.hp > 0) {
+                    const dist = distance(this.x + sc, this.y + sc, p.x + sc, p.y + sc);
+                    if (dist < this.falloff) {
+                        const dmg = Math.ceil((1- (dist / this.falloff)) * this.damage);
+                        p.hp = Math.max(0, p.hp - dmg);
+                        console.log(dmg);
+                    }
+                }
+            });
         }
         
     }
@@ -70,7 +93,7 @@ export default class Projectile {
     tick() {
         if (this.behavior === Projectile.BEHAVIORS.DEMO && this.state === Projectile.STATES.ready) {
             this.state = Projectile.STATES.aim;
-            setTimeout(() => this.fire(0, 400, rand(30, 50), rand(25, 35)), rand(1000,5000));
+            setTimeout(() => this.fire(0, 350, rand(30, 50), rand(21, 32)), rand(1000,5000));
             
         }
 
@@ -83,11 +106,29 @@ export default class Projectile {
 
             if (this.behavior === Projectile.BEHAVIORS.DEMO && this.y > 600) return this.detonate();
 
-            const clampedX = Math.max(0, Math.min(a.width, this.x + sc));
-            if (this.y > state.terrain[Math.floor((clampedX / a.width) * state.terrain.length -1)] - (config.SPRITE_SIZE * config.SCALE_RATIO)) return this.detonate();
+            // Detect out of area
+            if (this.x + sc < 0 || this.x + sc > state.terrain.width) {
+                this.state = Projectile.STATES.fallout;
+                return;
+            }
+
+            const terrainY = state.terrain.getCurrentY(this.x + sc);
+            if (this.y + sc > terrainY) return this.detonate();
+
+            // TODO detect collision with other players!
+            for (let i = 0; i < state.players.length; i++) {
+                if (state.players[i] !== this.owner) {
+                    const p = state.players[i];
+                    if (this.x + sc > p.x + config.SPRITE_SIZE && this.y + sc > p.y + config.SPRITE_SIZE && this.x + sc < p.x + sc * 2 && this.y + sc < p.y + sc * 2) {
+                        return this.detonate(true);
+                    }
+                }
+            }
+            
         }
 
         if (this.state === Projectile.STATES.fallout) {
+            this.tail.shift();
             if (this.tail.length === 0) {
                 this.state = this.behavior === Projectile.BEHAVIORS.DEMO ? Projectile.STATES.ready : Projectile.STATES.done;
             }
@@ -103,7 +144,7 @@ export default class Projectile {
         c.moveTo(cx, cy);
         for (let t = 0; t < this.tail.length; t++) {
             c.beginPath();
-            c.strokeStyle = `rgba(${this.tailColor.join()}, ${1 / (this.tail.length - t)})`;
+            c.strokeStyle = `rgba(${this.tailColor.join()}, ${0.7 / (this.tailLength - t)})`;
             c.lineTo(this.tail[t][0] + size / 2, this.tail[t][1] + size / 2);
             c.stroke();
         }
@@ -129,7 +170,7 @@ export default class Projectile {
                 c.beginPath();
                 c.arc(cx, cy, this.behavior === Projectile.BEHAVIORS.DEMO ? this.falloff * 4 : this.falloff, 0, 2 * Math.PI);
                 const explosionRadial = c.createRadialGradient(cx, cy, 1, cx, cy, this.behavior === Projectile.BEHAVIORS.DEMO ? this.falloff * 4 : this.falloff);
-                explosionRadial.addColorStop(0, `rgba(${this.tailColor.join()}, 0.8)`);
+                explosionRadial.addColorStop(0.1, `rgba(${this.tailColor.join()}, 0.9)`);
                 explosionRadial.addColorStop(1, `rgba(${this.tailColor.join()}, 0.01)`);
                 c.fillStyle = explosionRadial;
 
@@ -138,7 +179,6 @@ export default class Projectile {
                 c.fill();
                 c.restore();
                 
-                this.tail.shift();
                 break;
         }
 
@@ -156,9 +196,8 @@ export default class Projectile {
         for (;steps < maxSteps; steps++) {
             updateBallistic(test, state.windDirection, state.windStrength, state.gravity);
 
-            const clampedX = Math.max(0, Math.min(a.width, test.x + sc));
-            const index = Math.min(state.terrain.length - 1, Math.floor((clampedX / a.width) * state.terrain.length));
-            if (test.y > state.terrain[index] - (config.SPRITE_SIZE * config.SCALE_RATIO)) {
+            const terrainY = state.terrain.getCurrentY(this.x + sc);
+            if (test.y > terrainY) {
                 return steps;
             }
         }

@@ -22,18 +22,19 @@
         #global {position: absolute; top: 0; right:0; z-index: 999}
         #toggle-audio {font-size: 36px; padding: 8px;}
 
-        #wrapper {position: relative; width: 1600px; height: 900px; flex: none;}
+        #wrapper {position: relative; width: 1080px; height: 600px; flex: none; overflow:hidden}
         .hud {position: absolute; inset: 0; display: none;}
         h2 { margin-bottom: 12px; margin-top: 12px;}
 
-        .menu { position: absolute;  border: 6px solid #666; background-color: rgba(188, 188, 188, 0.88); padding: 12px; }
+        .menu { position: absolute;  border: 6px solid #666; background-color: rgba(188, 188, 188, 0.88); padding-left: 10px; padding-right: 10px; }
         .mp {display:none;}
-        #picker{  margin-top: 172px; margin-left: 100px;}
+        #picker{  margin-top: 20px; margin-left: 20px;}
+        #lobby-owner{ position: absolute; margin-top: 20px; width:100%; text-align: center; color: #000;}
         #invite{margin-top: 172px;margin-left: 960px;}
         input,input:focus,input:active,select,select:focus,select:active {border: 2px outset black; background-color: var(--bg); padding: 3px; outline: none;}
         input:invalid, input:user-invalid {background-color: var(--bgDark);}
         .i-g { width: 100%; margin-bottom: 12px;}
-        #start-match { margin: auto; font-size: 48px; margin-top: 660px; display: block;}
+        #start-match { margin: auto; font-size: 32px; margin-top: 440px; display: block;}
         button:hover {outline: 6px solid var(--bgDark); border: 12px outset var(--bgLite);}
         button:active {outline: 6px solid var(--bgDark); border: 12px inset var(--bgDark); background-color: var(--bg); transform: translateY(4px); }
         button { color: #333; background-color: var(--bg); padding: 0.88em; opacity: 0.88; border: 12px outset var(--bg); outline: 6px solid black; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px  1px 0 #000, 1px  1px 0 #000; font-weight: bold;}
@@ -41,7 +42,7 @@
         .green {--bg: #090; --bgDark: #060; --bgLite: #0c0; color: white}
         .red {--bg: #900; --bgDark: #600; --bgLite: #c00; color: white}
 
-        canvas { image-rendering: pixelated; position: absolute; top: 0; left: 0; width: 1600px; height: 900px; display: block;}
+        canvas { image-rendering: pixelated; position: absolute; top: 0; left: 0; width: 1080px; height: 600px; display: block;}
 
         #bottom-hud { bottom: 0; position: absolute; height: 100px; background-color: rgba(128, 128, 128, 0.9); width: calc(100% - 24px); border: 2px solid black; padding: 10px;}
         #speedometer, #fuelometer {width: 80%; border: 2px solid black; margin: 10px auto; height: 30px; background-color: #333;}
@@ -111,6 +112,7 @@
 <div id="wrapper">
     <canvas id="canvas">Oops...</canvas>
     <div id="lobby" class="hud">
+        <div id="lobby-owner" class="mp"></div>
         <div id="picker" class="menu">
             <h2>CUSTOMIZE YOUR HERO</h2>
             <div class="i-g">

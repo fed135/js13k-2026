@@ -52,7 +52,7 @@ export function randomPoints(amount, startingValue, variation, roughness, min, m
     const points = [startingValue];
     for(let i = 0; i < amount; i++ ) {
         if (Math.random() < variation) {
-            points.push(Math.min(max ?? Infinity, Math.max(min ?? -Infinity, Math.round((points[points.length -1] + ((Math.random() * 0.1) - 0.05) * roughness)))));
+            points.push(Math.min((max ?? Infinity) * roughness, Math.max((min ?? -Infinity) * roughness, Math.round((points[points.length -1] + ((Math.random() * 0.1) - 0.05) * roughness)))));
         }
         else points.push(points[points.length -1]);
     }
@@ -89,4 +89,8 @@ export function updateBallistic(target, windDirection, windStrength, gravity) {
   
   target.angle = Math.atan2(target.vx, -target.vy) * 180 / Math.PI;
   //target.distanceTraveled = Math.hypot(this.x - this.originalX, this.y - this.originalY); // Could be interesting to calculate bonus damage based on airtime
+}
+
+export function distance(x1, y1, x2, y2) {
+  return Math.hypot(x2 - x1, y2 - y1);
 }

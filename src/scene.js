@@ -1,10 +1,14 @@
 import { a,c, perlin } from './canvas.js';
 
-const pattern = c.createPattern(perlin(), 'repeat');
+export const pattern = c.createPattern(perlin(), 'repeat');
 
-export function sky(t) {
+let t = - 1000;
+
+export function sky() {
     //sky
-    const gradient = c.createRadialGradient(t * 0.2, 90, 30, t * 0.2, 100, a.width);
+    t++;
+    if (t>3000) t =-1000;
+    const gradient = c.createRadialGradient(t, 90, 30, t, 100, a.width);
     
     gradient.addColorStop(0, "#FAFAD2");
     gradient.addColorStop(0.05, "white");
@@ -16,50 +20,20 @@ export function sky(t) {
     c.fillRect(0,0,a.width, a.height);
 }
 
-export function terrain(points, offset) {
-    c.strokeStyle = "black";
-    c.lineWidth = 6;
-    c.beginPath();
-    c.moveTo(0, Math.round(a.height * offset));
-    for (let t = 0; t < points.length; t++) {
-        const x = Math.round(t * (a.width / points.length));
-        const y = points[t];
-        c.lineTo(x, y);
-    }
-    c.lineTo(a.width, points[points.length -1]);
-    c.lineTo(a.width, a.height);
-    c.lineTo(0, a.height);
-    c.lineTo(0, Math.round(a.height * offset));
-    c.closePath();
-    const soilGradient = c.createLinearGradient(0, a.height * offset, 0, a.height);
-    
-    soilGradient.addColorStop(0, "#009900");
-    soilGradient.addColorStop(0.05, "#006633");
-    soilGradient.addColorStop(0.1, "#ffcc99");
-    soilGradient.addColorStop(1, "brown");
-    
-    c.fillStyle = soilGradient;
-    c.fill();
-    c.stroke();
-    
-    c.globalCompositeOperation = 'multiply';
-    c.fillStyle = pattern;
-    c.fill();
-    c.globalCompositeOperation = 'source-over';
-}
-
 export function backdrop(parralax, height) {
+    const sy = Math.round(a.height * height);
     c.beginPath();
-    c.moveTo(0, Math.round(a.height * height));
+    c.moveTo(0, sy);
     for (let t = 0; t < parralax.length; t++) {
         const x = Math.round(t * (a.width / parralax.length));
         const y = parralax[t];
-        c.lineTo(x, y);
+        c.lineTo(x, y + sy);
+        
     }
     c.lineTo(a.width, parralax[parralax.length -1]);
     c.lineTo(a.width, a.height);
     c.lineTo(0, a.height);
-    c.lineTo(0, Math.round(a.height * height));
+    c.lineTo(0, sy);
     c.closePath();
     const parallaxGradient = c.createLinearGradient(0, 0, 0, a.height);
     parallaxGradient.addColorStop(0, "white");
@@ -69,8 +43,8 @@ export function backdrop(parralax, height) {
 }
 
 export function mound(offsetX, offsetY, height) {
-    c.strokeStyle = "black";
-    c.lineWidth = 6;
+    //c.strokeStyle = "black";
+    //c.lineWidth = 6;
     c.beginPath();
     c.moveTo(Math.round(a.width * offsetX) - 600, a.height);
     c.lineTo(Math.round(a.width * offsetX) - 250, Math.round(a.height * offsetY) + 100);
@@ -88,7 +62,7 @@ export function mound(offsetX, offsetY, height) {
     c.fillStyle = soilGradient;
     //c.fillStyle = "#8B4513";
     c.fill();
-    c.stroke();
+    //c.stroke();
     
     c.globalCompositeOperation = 'multiply';
     c.fillStyle = pattern;

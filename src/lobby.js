@@ -3,13 +3,15 @@ import * as match from "./match.js";
 import { a,c, cleanCanvas, printFrame } from './canvas.js';
 import Unicorns from "./player.js";
 import config from "./config.js";
-import {sky, terrain, backdrop, mound} from "./scene.js";
-import { randomBase, hexToRgb, randomPoints, $ } from "./utils.js";
+import {sky, backdrop, mound} from "./scene.js";
+import { randomBase, hexToRgb, randomPoints, $, hide, show } from "./utils.js";
 import Rainbow from './rainbow.js';
 import Projectile from "./projectile.js";
+import Terrain from "./terrain.js";
 
-const FOREGROUND_OFFSET = 0.75;
-const BACKGROUND_HEIGHT = 0.45;
+const FOREGROUND_OFFSET = 0.8;
+const BACKGROUND_HEIGHT = 0.3;
+const MOUND_HEIGHT = 0.55;
 const UNI_COUNT = 32;
 
 const cyclingUnicorns = [];
@@ -23,7 +25,6 @@ let demoRockets = [];
 export function loop() {
     //clear
     cleanCanvas();
-    state.terrain = foreground;
 
     sky(state.t);
 
@@ -36,13 +37,13 @@ export function loop() {
     });
 
     // background
-    mound(0.2, BACKGROUND_HEIGHT, FOREGROUND_OFFSET );
-    mound(0.4, BACKGROUND_HEIGHT, FOREGROUND_OFFSET );
-    mound(0.6, BACKGROUND_HEIGHT, FOREGROUND_OFFSET );
-    mound(0.8, BACKGROUND_HEIGHT, FOREGROUND_OFFSET );
+    mound(0.2, MOUND_HEIGHT, FOREGROUND_OFFSET );
+    mound(0.4, MOUND_HEIGHT, FOREGROUND_OFFSET );
+    mound(0.6, MOUND_HEIGHT, FOREGROUND_OFFSET );
+    mound(0.8, MOUND_HEIGHT, FOREGROUND_OFFSET );
 
     // Foreground
-    terrain(foreground, FOREGROUND_OFFSET);
+    state.terrain.render();
 
     // Player demo
     state.players.forEach((p) => {
@@ -68,6 +69,8 @@ export const load = () => {
     state.windDirection = 0;
     state.windStrength = 0;
     state.players = [];
+    state.terrain = new Terrain(128, Math.round(a.height * FOREGROUND_OFFSET), 0.5, config.TERRAIN_ROUGHNESS, -3, 3, Math.round(a.height * FOREGROUND_OFFSET), a.width);
+    hide($('lobby-owner'));
 
     if (mpEnabled) {
         $('name').value = state.username;
@@ -80,6 +83,10 @@ export const load = () => {
                 hide($('picker'));
                 hide($('start-match'));
                 users.forEach((u, i) => {
+                    if (u.isHost) {
+                        show($('lobby-owner'));
+                        $('lobby-owner').innerHTML = `${u.username}'s lobby`;
+                    }
                     state.players[i].name = u.username;
                     state.players[i].id = u.userId; // If no id, it's a BOT.
                 });
@@ -114,7 +121,7 @@ export const load = () => {
     for (let i = 0; i < 4; i++ ) {
         const player = new Unicorns(randomBase(), [255,255,255], uniNames[i], Unicorns.BEHAVIORS.DEMO);
         player.x = a.width * (0.2 * (i + 1)) - (config.SPRITE_SIZE * config.SCALE_RATIO) / 2;
-        player.y = a.height * BACKGROUND_HEIGHT - (config.SPRITE_SIZE * config.SCALE_RATIO);
+        player.y = a.height * MOUND_HEIGHT - (config.SPRITE_SIZE * config.SCALE_RATIO);
         if (!mpEnabled && i === 0) player.id = 1;
         state.players.push(player);
     }
@@ -156,5 +163,4 @@ export const unload = () => {
 
 //-----------------------------
 
-const foreground = randomPoints(128, Math.round(a.height * FOREGROUND_OFFSET), 0.5, config.TERRAIN_ROUGHNESS);
-const parralax = randomPoints(64, Math.round(a.height * BACKGROUND_HEIGHT), 0.6, config.TERRAIN_ROUGHNESS * 10, 100, a.height * FOREGROUND_OFFSET);
+const parralax = randomPoints(64, Math.round(a.height * BACKGROUND_HEIGHT), 0.6, config.TERRAIN_ROUGHNESS * 2, -10, 1);

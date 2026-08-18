@@ -242,6 +242,7 @@ function _detonation(note, length) {
 }
 
 export function sfx(type, range, length) {
+    if (!audioEnabled) return;
     const note = rand(range[0], range[1]);
     
     if (type === config.S.airtime) _airTime(note, length);

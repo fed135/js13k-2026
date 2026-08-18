@@ -2,16 +2,15 @@ import { playTrack, sfx, setVolume, announcer } from "./audio.js";
 import * as lobby from "./lobby.js";
 import { a,c,cleanCanvas, moveCamera, printFrame, resetCamera } from './canvas.js';
 import config from "./config.js";
-import {randomPoints} from "./utils.js";
-import {sky, terrain} from "./scene.js";
+import {sky} from "./scene.js";
 import {$,show,hide, rand} from "./utils.js";
 import Rocket from "./rocket.js";
 import Projectile from "./projectile.js";
 import Rainbow from "./rainbow.js";
 import Player from "./player.js";
+import Terrain from "./terrain.js";
 
-
-const FOREGROUND_OFFSET = 0.75;
+const FOREGROUND_OFFSET = 0.65;
 let input = {};
 
 const mpEnabled = (window.Wavedash);
@@ -25,13 +24,12 @@ export function loop() {
 
     //clear
     cleanCanvas();
-    state.terrain = foreground;
 
     //sky
     sky(state.t);
 
     // Foreground
-    terrain(foreground, FOREGROUND_OFFSET);
+    state.terrain.render();
 
     if (!state.match.shotMade && state.match.turnCountdown > 0) {
         $('turn-timer').innerHTML = Math.round((state.match.turnCountdown - Date.now()) / 1000);
@@ -44,15 +42,14 @@ export function loop() {
             if (currentPlayer.speed === 50) playerShoot();
         }
         if (input[38] || input[40]) {
-            var dir = input[38] ? -1 : 1;
-            currentPlayer.angle += (dir * 1);
+            var dir = input[38] ? 1 : -1;
+            const newAngle = Math.min(80, Math.max(10, Math.abs(currentPlayer.angle) + dir));
+            currentPlayer.angle = (currentPlayer.face * -1) * newAngle;
+            
         }
         if (input[37] || input[39]) {
             var dir = input[37] ? -1 : 1;
-            if (state.match.currentPlayerFuel > 0) {
-                currentPlayer.x += (dir * 1);
-                state.match.currentPlayerFuel -= 0.5;
-            }
+            currentPlayer.move(dir);
         }
     }
 
@@ -65,7 +62,8 @@ export function loop() {
         state.match.currentMissile.tick();
         state.match.currentMissile.render();
 
-        moveCamera([state.match.currentMissile.x, state.match.currentMissile.y, 800, 450], 200);
+        // 540/300
+        moveCamera([state.match.currentMissile.x - 270, state.match.currentMissile.y -150, 540, 300], 4);
 
         if (state.match.currentMissile.state === Projectile.STATES.done) {
             state.match.currentMissile = null;
@@ -73,7 +71,9 @@ export function loop() {
         }
     }
     else {
-        resetCamera(200);
+        //resetCamera(60);
+        moveCamera([state.players[state.match.currentPlayerTurn].x - 540, state.players[state.match.currentPlayerTurn].y -300, 1080, 600], 20);
+
     }
 
     printFrame();
@@ -97,9 +97,22 @@ export const load = () => {
         currentPlayerFuel: config.FUEL_PER_TURN,
     }
 
+    // if mp, wait for host to send the terrain coords
+    if (mpEnabled) {
+
+    }
+    else {
+        state.terrain = new Terrain(256, Math.round(a.height * FOREGROUND_OFFSET), 0.5, config.TERRAIN_ROUGHNESS, -6, 6, Math.round(a.height * FOREGROUND_OFFSET), a.width * 2);
+    }
+
+
     currentPlayer = mpEnabled ? state.players.find(p => p.id === state.id) : state.players[0];
 
-    state.players.forEach((p) => p.behavior = Player.BEHAVIORS.PLAYER);
+    state.players.forEach((p, i) => {
+        p.behavior = Player.BEHAVIORS.PLAYER;
+        if (i < 2) p.face *= -1;
+        p.x = state.terrain.width * (0.2 * (i + 1)) - (config.SPRITE_SIZE * config.SCALE_RATIO) / 2;
+    });
 
     endTurn();
 };
@@ -118,6 +131,7 @@ function playerShoot() {
     let missile = new Rainbow(Projectile.BEHAVIORS.PLAYER);
     missile.fire(state.players[state.match.currentPlayerTurn].x, state.players[state.match.currentPlayerTurn].y, state.players[state.match.currentPlayerTurn].angle, state.players[state.match.currentPlayerTurn].speed);
     state.match.currentMissile = missile;
+    missile.owner = state.players[state.match.currentPlayerTurn];
 }
 
 function endTurn() {
@@ -129,6 +143,12 @@ function endTurn() {
     state.match.gameTimer++;
     state.match.shotMade = false;
     state.match.currentPlayerTurn = (state.match.currentPlayerTurn + 1) % 4;
+
+    if (state.players[state.match.currentPlayerTurn].hp <= 0) {
+        if (state.players.filter((p) => p.hp > 0).length > 1) return endTurn();
+        else return endMatch();
+    }
+
     state.players[state.match.currentPlayerTurn].speed = 0;
     state.match.currentPlayerFuel = config.FUEL_PER_TURN;
     state.match.turnTimer = setTimeout(endTurn, config.TURN_DURATION);
@@ -153,7 +173,7 @@ function endTurn() {
     if (!state.players[state.match.currentPlayerTurn].id) {
         // It's a bot... try to aim...?
         setTimeout(() => {
-            state.players[state.match.currentPlayerTurn].angle = rand(-45, 45);
+            state.players[state.match.currentPlayerTurn].angle = rand(20, 60) * state.players[state.match.currentPlayerTurn].face * -1;
             state.players[state.match.currentPlayerTurn].speed = rand(25, 40);
 
             playerShoot();
@@ -166,7 +186,3 @@ function endMatch() {
     state.match.scoreScreen = true;
 }
 
-
-//-----------------------------
-
-const foreground = randomPoints(128, Math.round(a.height * FOREGROUND_OFFSET), 0.5, config.TERRAIN_ROUGHNESS);

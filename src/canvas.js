@@ -15,7 +15,7 @@ export function cleanCanvas(cameraOnly) {
         canvas.width = config.GAME_WIDTH;
         canvas.height = config.GAME_HEIGHT;
     }
-    camera.width = config.GAME_WIDTH;
+    camera.width = window.state?.terrain?.width ?? config.GAME_WIDTH;
     camera.height = config.GAME_HEIGHT;
 
     ctx.imageSmoothingEnabled = false;
@@ -33,10 +33,12 @@ export function osc(w, h) {
 }
 
 export function moveCamera(coords, speed) {
-    cameraMovement.from = cameraMovement.current;
-    cameraMovement.to = coords;
-    cameraMovement.ot = 0;
-    cameraMovement.speed = speed;
+    if (!cameraMovement.to) {
+      cameraMovement.from = cameraMovement.current;
+      cameraMovement.to = coords;
+      cameraMovement.ot = 0;
+      cameraMovement.speed = speed;
+    }
 }
 
 export function resetCamera(speed) {
@@ -50,7 +52,12 @@ export function printFrame() {
         cameraMovement.current[2] = lerp(cameraMovement.from[2], cameraMovement.to[2], cameraMovement.ot / cameraMovement.speed);
         cameraMovement.current[3] = lerp(cameraMovement.from[3], cameraMovement.to[3], cameraMovement.ot / cameraMovement.speed);
 
+        // Bound!
+        cameraMovement.current[0] = Math.min(camera.width - canvas.width, Math.max(0, cameraMovement.current[0]));
+        cameraMovement.current[1] = Math.min(camera.height, Math.max(0, cameraMovement.current[1]));
+
         cameraMovement.ot++;
+        if (cameraMovement.ot === cameraMovement.speed) delete cameraMovement.to;
     }
 
     ctx.drawImage(camera, ...cameraMovement.current, 0, 0, config.GAME_WIDTH, config.GAME_HEIGHT);

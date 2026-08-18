@@ -44,6 +44,8 @@ export default class Player {
         this.hatColor = hatColor;
         this.name = name;
         this.behavior = behavior;
+        this.hp = 100;
+        this.currentFuel = config.FUEL_PER_TURN;
 
         this.state = null;
     
@@ -58,16 +60,16 @@ export default class Player {
     tick() {
         // Check falling
         if (this.behavior !== Player.BEHAVIORS.DEMO) {
-            const clampedX = Math.max(0, Math.min(a.width, this.x + sc));
-            const index = Math.min(state.terrain.length - 1, Math.floor((clampedX / a.width) * state.terrain.length));
-            if (this.y < state.terrain[index] - (config.SPRITE_SIZE * config.SCALE_RATIO)) {
+            const terrainY = state.terrain.getCurrentY(this.x + sc);
+            
+            if (this.y < terrainY - (config.SPRITE_SIZE * config.SCALE_RATIO)) {
                 if (this.behavior !== Player.BEHAVIORS.LOBBY_CYCLE) {
                     this.falling = true;
                     this.y += 7;
                     return;
                 }
             }
-            this.y = state.terrain[index] - (config.SPRITE_SIZE * config.SCALE_RATIO);
+            this.y = terrainY - (config.SPRITE_SIZE * config.SCALE_RATIO);
         }
 
         // Logic
@@ -82,7 +84,15 @@ export default class Player {
             case Player.STATES.IDLE:
                 this.frameOffset[1] = 0;
                 this.animationStep(state.t, Player.ANIMATION_SPEED.SLOW);
-                break; 
+                break;
+            case Player.STATES.DEAD:
+                this.frameOffset[1] = 3;
+                this.frameOffset[0] = 0;
+                break;
+            case Player.STATES.AIMING:
+                this.frameOffset[1] = 0;
+                this.animationStep(state.t, Player.ANIMATION_SPEED.NEVER);
+                break;
             default: 
                 
         }
@@ -131,8 +141,24 @@ export default class Player {
 
             case Player.BEHAVIORS.PLAYER:
                 // Check match state, is it our turn ? Are there inputs
+                if (this.hp <= 0) this.state = Player.STATES.DEAD;
                 break;
         }
+    }
+    
+    move(dir) {
+        if (dir === 0) {
+            this.changeState(Player.STATES.IDLE);
+        }
+
+        if (this.currentFuel > 0) {
+            this.x = Math.min(state.terrain.width, Math.max(0, this.x + dir));
+            this.currentFuel--;
+        }
+        const newFace = dir * -1;
+        if (newFace !== this.face) this.angle *= -1;
+        this.face = newFace;
+        this.changeState(Player.STATES.WALKING);
     }
 
     render() {
@@ -156,8 +182,26 @@ export default class Player {
         );
         c.restore();
 
+        c.strokeStyle = 'black';
+        c.lineWidth = 4;
+        c.lineJoin = "round";
+
+        // hpbar
+        if (this.behavior === Player.BEHAVIORS.PLAYER && this.hp > 0) {
+            c.strokeStyle
+            c.strokeRect(this.x, this.y - 8, (config.SPRITE_SIZE * config.SCALE_RATIO), 9);
+            c.fillStyle = 'red';
+            c.fillRect(this.x, this.y - 8, (this.hp/100) * (config.SPRITE_SIZE * config.SCALE_RATIO), 9);
+        }
+
         // Display name (should probably render once in an osc)
+        c.save();
         c.textAlign = 'center';
-        c.fillText(this.name, this.x + (config.SPRITE_SIZE * config.SCALE_RATIO) /2, this.y - 16);
+        c.font = 'normal bolder 18px sans-serif';
+        c.fillStyle = this.hp > 0 ? 'white' : '#333';
+        
+        c.strokeText(this.name, this.x + (config.SPRITE_SIZE * config.SCALE_RATIO) /2, this.y + (this.hp > 0 ? -16 : 16));
+        c.fillText(this.name, this.x + (config.SPRITE_SIZE * config.SCALE_RATIO) /2, this.y + (this.hp > 0 ? -16 : 16));
+        c.restore();
     }
 }
