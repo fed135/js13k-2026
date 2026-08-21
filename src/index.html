@@ -42,14 +42,26 @@
         .green {--bg: #090; --bgDark: #060; --bgLite: #0c0; color: white}
         .red {--bg: #900; --bgDark: #600; --bgLite: #c00; color: white}
 
+
+        #current-angle,#current-weapon { font-size: 18px; font-weight: bold; text-align: center; background-color: rgba(255,255,255,0.1); border: 3px inset grey; width: 26px; float:left; padding: 12px;}
+        label {
+            float:left;
+            padding-top: 5px;
+        }
+
         canvas { image-rendering: pixelated; position: absolute; top: 0; left: 0; width: 1080px; height: 600px; display: block;}
 
         #bottom-hud { bottom: 0; position: absolute; height: 100px; background-color: rgba(128, 128, 128, 0.9); width: calc(100% - 24px); border: 2px solid black; padding: 10px;}
-        #speedometer, #fuelometer {width: 80%; border: 2px solid black; margin: 10px auto; height: 30px; background-color: #333;}
+        #speedometer, #fuelometer {width: 75%; border: 2px solid black; margin: 10px auto; height: 30px; background-color: #333;}
         #current-speed { background-color: darkred; border: 4px darkred inset; height: 22px;}
+        #last-shot {color: darkred; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px  1px 0 #000, 1px  1px 0 #000; position:relative; margin-top: -46px;}
         #current-fuel { background-color: darkblue; border: 4px darkblue inset; height: 22px;}
-        #top-hud { top:0; position: absolute; height:52px; background-color: rgba(128, 128, 128, 0.9); width: calc(100% - 4px); border: 2px solid black; color:#000;}
+        #total { top:0; position: absolute; height:52px; width: 100%; color:#000; text-align: right;color:white; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px  1px 0 #000, 1px  1px 0 #000;}
         #game-over { display: none;}
+        #current-weapon {position: absolute; right: 20px; bottom: 20px; width:50px; padding:12px;}
+        #next-weapon{position:absolute; right: 0px; bottom: 36px;}
+        #prev-weapon{position:absolute; right: 52px; bottom: 36px;}
+        #current-ammo{font-size:12px; padding-top: 10px;}
 
         #announcer {
             display: none;
@@ -121,7 +133,7 @@
             </div>
 
             <div class="i-g">
-            <label for="baseColor">HELMET COLOR:</label>
+            <label for="baseColor">COLOR:</label>
             <input id="baseColor" type="color" oninput="window.updateColor(event)" value="#ffffff" />
             </div>
 
@@ -148,19 +160,21 @@
     </div>
     <div id="match" class="hud">
         <div id="announcer"></div>
-        <div id="top-hud">
-            <div id="current-life">0</div>
-            <div id="current-ammo">0</div>
-            <div id="current-weapon">rainbow</div>
-            <div id="turn-timer">0</div>
-        </div>
+        <div id="total"></div>
         <div id="bottom-hud">
-            <div id="current-angle"></div>
-            <div id="speedometer">
+            <label for="current-angle">&#x1F4D0;</label><div id="current-angle"></div>
+            <label for="speedometer">&#x1F50B;</label><div id="speedometer">
                 <div id="current-speed"></div>
+                <div id="last-shot">&#9660;</div>
             </div>
-            <div id="fuelometer">
+            <label for="fuelometer">&#x1F40E;</label><div id="fuelometer">
                 <div id="current-fuel"></div>
+            </div>
+            <div id="current-weapon">
+                <div id="prev-weapon">&#9664;</div>
+                <div id="weapon-icon"></div>
+                <div id="current-ammo"></div>
+                <div id="next-weapon">&#9654;</div>
             </div>
         </div>
         <div id="game-over" class="menu">

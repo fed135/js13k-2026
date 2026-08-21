@@ -1,8 +1,8 @@
 import config from "./config.js";
 import {lerp} from "./utils.js";
 
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
+export const canvas = document.getElementById('canvas');
+export const ctx = canvas.getContext('2d');
 const [camera, cameraCtx] = osc(config.GAME_WIDTH, config.GAME_HEIGHT);
 
 let cameraMovement = { from: null, to: null, current: [0, 0, config.GAME_WIDTH, config.GAME_HEIGHT], ot: 0, speed: 0 };
@@ -53,7 +53,7 @@ export function printFrame() {
         cameraMovement.current[3] = lerp(cameraMovement.from[3], cameraMovement.to[3], cameraMovement.ot / cameraMovement.speed);
 
         // Bound!
-        cameraMovement.current[0] = Math.min(camera.width - canvas.width, Math.max(0, cameraMovement.current[0]));
+        cameraMovement.current[0] = Math.min(camera.width - cameraMovement.current[2], Math.max(0, cameraMovement.current[0]));
         cameraMovement.current[1] = Math.min(camera.height, Math.max(0, cameraMovement.current[1]));
 
         cameraMovement.ot++;

@@ -2,12 +2,12 @@ import { a,c, perlin } from './canvas.js';
 
 export const pattern = c.createPattern(perlin(), 'repeat');
 
-let t = - 1000;
+let t = - 2000;
 
 export function sky() {
     //sky
     t++;
-    if (t>3000) t =-1000;
+    if (t>4000) t =-2000;
     const gradient = c.createRadialGradient(t, 90, 30, t, 100, a.width);
     
     gradient.addColorStop(0, "#FAFAD2");

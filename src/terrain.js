@@ -1,6 +1,7 @@
 import { randomPoints } from "./utils.js";
 import { pattern } from "./scene.js";
 import {a,c} from "./canvas.js";
+import Projectile from "./projectile.js";
 
 export default class terrain {
     constructor(amount, startingValue, variation, roughness, min, max, offset, width) {
@@ -47,12 +48,12 @@ export default class terrain {
         const index = Math.min(this.coords.length - 1, Math.floor((clampedX / this.width) * this.coords.length));
         
         // Apply reduction to surrounding terrain as well
-        const newfloor = this.coords[index][1] + (falloff * (offset ? 0.1 : 0.5));
+        const newfloor = this.coords[index][1] + (falloff * (offset ? 0.1 : 1/6));
         if (this.coords[index][1] > newfloor) return;
-                    
-        for(let i = 1; i < falloff / (offset ? 100 : 20); i++) {
-            if (index - i > 0) this.coords[index - i][1] = Math.max(newfloor - (falloff * (i/8) * 0.5), this.coords[index - i][1]);
-            if(index + i < this.coords.length) this.coords[index + i][1] = Math.max(newfloor - (falloff * (i/8) * 0.5), this.coords[index + i][1]);
+
+        for(let i = 1; i < falloff / (offset ? 100 : 2); i++) {
+            if (index - i > 0) this.coords[index - i][1] = Math.max(newfloor - (falloff * (i/16) * (i/16)), this.coords[index - i][1]);
+            if(index + i < this.coords.length) this.coords[index + i][1] = Math.max(newfloor - (falloff * (i/16) * (i/16)), this.coords[index + i][1]);
         }
         this.coords[index][1] = newfloor;
     }

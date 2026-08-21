@@ -1,10 +1,12 @@
 import { osc,a,c } from "./canvas.js";
 import config from "./config.js";
 import { rand, updateBallistic, distance } from "./utils.js";
-import { sfx, setVolume } from "./audio.js";
+import { sfx, setVolume, announcer } from "./audio.js";
 
 
 const sc = (config.SPRITE_SIZE * config.SCALE_RATIO) / 2;
+
+const particles = [];
 
 export default class Projectile {
     static STATES= {
@@ -18,15 +20,18 @@ export default class Projectile {
     static BEHAVIORS = {
         DEMO: 0,
         PLAYER: 1,
+        PARTICLE: 2,
     }
 
     constructor(head, tailColor, tailLength, damage, falloff, weight, behavior) {
-        this.sprite = osc(config.SPRITE_SIZE, config.SPRITE_SIZE);
-        this.sprite[1].drawImage(head, 0, 0);
+        if(head) {
+            this.sprite = osc(config.SPRITE_SIZE, config.SPRITE_SIZE);
+            this.sprite[1].drawImage(head, 0, 0);
+        }
 
         this.x = 0;
         this.y = 0;
-        this.angle = 0;
+        this.angle = 45;
         this.speed = 0;
         //this.momentum = 0;
         this.tail = [];
@@ -37,6 +42,7 @@ export default class Projectile {
         this.weight = weight;
         this.vx = 0;
         this.vy = 0;
+        this.lifetime = 0;
 
         this.behavior = behavior;
         this.state = Projectile.STATES.ready;
@@ -57,7 +63,7 @@ export default class Projectile {
         this.vy = -Math.sin(this.angle) * speed;
         this.tail = [];
 
-        if (this.behavior !== Projectile.BEHAVIORS.DEMO) {
+        if (this.behavior === Projectile.BEHAVIORS.PLAYER) {
             setVolume(0.1);
             sfx(config.S.shot, [1200, 1250], 0.1);
         
@@ -69,12 +75,15 @@ export default class Projectile {
     detonate(offset) {
         this.state = Projectile.STATES.fallout;
 
-        if (this.behavior !== Projectile.BEHAVIORS.DEMO) {
+        if (this.behavior === Projectile.BEHAVIORS.PLAYER) {
+            Projectile.particleSystem(this.x, this.y + sc, [32,0,0], 50, 500);
+
             state.terrain.crater(this.x + sc, this.falloff, offset);
             sfx(config.S.detonation, [60,100], 2);
             setTimeout(() => setVolume(1), 4);
         
-        
+
+
             // Apply damage
             state.players.forEach((p) => {
                 if (p.hp > 0) {
@@ -82,7 +91,10 @@ export default class Projectile {
                     if (dist < this.falloff) {
                         const dmg = Math.ceil((1- (dist / this.falloff)) * this.damage);
                         p.hp = Math.max(0, p.hp - dmg);
-                        console.log(dmg);
+                        if (p.hp === 0) {
+                            //expode!
+                            Projectile.particleSystem(p.x, p.y + sc, [255,0,0], 100, 1000);
+                        }
                     }
                 }
             });
@@ -91,12 +103,12 @@ export default class Projectile {
     }
 
     tick() {
+        this.lifetime = ++this.lifetime % 0xffffffff;
+
         if (this.behavior === Projectile.BEHAVIORS.DEMO && this.state === Projectile.STATES.ready) {
             this.state = Projectile.STATES.aim;
             setTimeout(() => this.fire(0, 350, rand(30, 50), rand(21, 32)), rand(1000,5000));
-            
         }
-
 
         if (this.state === Projectile.STATES.airtime) {
             this.tail.push([this.x, this.y]);
@@ -124,7 +136,6 @@ export default class Projectile {
                     }
                 }
             }
-            
         }
 
         if (this.state === Projectile.STATES.fallout) {
@@ -132,6 +143,10 @@ export default class Projectile {
             if (this.tail.length === 0) {
                 this.state = this.behavior === Projectile.BEHAVIORS.DEMO ? Projectile.STATES.ready : Projectile.STATES.done;
             }
+        }
+
+        if (this.behavior === Projectile.BEHAVIORS.PARTICLE && this.lifetime > 1000) {
+            particles.shift();
         }
     }
 
@@ -144,26 +159,22 @@ export default class Projectile {
         c.moveTo(cx, cy);
         for (let t = 0; t < this.tail.length; t++) {
             c.beginPath();
-            c.strokeStyle = `rgba(${this.tailColor.join()}, ${0.7 / (this.tailLength - t)})`;
+            c.strokeStyle = `rgba(${this.tailColor.join()}, ${0.9 / (this.tailLength - t)})`;
             c.lineTo(this.tail[t][0] + size / 2, this.tail[t][1] + size / 2);
             c.stroke();
         }
 
+        if (this.behavior === Projectile.BEHAVIORS.PARTICLE) return;
+
         switch(this.state) {
             case Projectile.STATES.airtime:
-                
-                // head
-                c.save();
-                c.translate(cx, cy);
-                c.rotate(this.angle * Math.PI / 180);
-                c.drawImage(this.sprite[0], -size / 2, -size / 2, size, size);
-                c.restore();
-
-                break;
-            case Projectile.STATES.aim:
-                if (this.behavior !== Projectile.BEHAVIORS.DEMO) {
-                    c.moveTo(cx, cy);
-                    c.arcTo();
+                if (this.sprite) {
+                    // head
+                    c.save();
+                    c.translate(cx, cy);
+                    c.rotate(this.angle * Math.PI / 180);
+                    c.drawImage(this.sprite[0], -size / 2, -size / 2, size, size);
+                    c.restore();
                 }
                 break;
             case Projectile.STATES.fallout: 
@@ -181,8 +192,6 @@ export default class Projectile {
                 
                 break;
         }
-
-        c.strokeStyle = 'black';
     }
 
     _flightTime(angle, speed) {
@@ -202,5 +211,23 @@ export default class Projectile {
             }
         }
         return maxSteps;
+    }
+
+    static particleSystem(x, y, color, num, speed) {
+        for (let i = 0; i < num; i++) {
+            setTimeout(() => {
+                const p = new Projectile(null, color, 100, 0, 0, 20, Projectile.BEHAVIORS.PARTICLE);
+                p.fire(x, y, rand(0, 180), rand(10, 20));
+                particles.push(p);
+            }, (speed/num) * i);
+        }
+    }
+
+    static renderParticles() {
+        c.lineWidth = 4;
+        particles.forEach((p) => {
+            p.tick();
+            p.render();
+        });
     }
 }

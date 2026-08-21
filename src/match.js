@@ -1,9 +1,9 @@
 import { playTrack, sfx, setVolume, announcer } from "./audio.js";
 import * as lobby from "./lobby.js";
-import { a,c,cleanCanvas, moveCamera, printFrame, resetCamera } from './canvas.js';
+import { a,c,cleanCanvas, moveCamera, printFrame, resetCamera, ctx } from './canvas.js';
 import config from "./config.js";
-import {sky} from "./scene.js";
-import {$,show,hide, rand} from "./utils.js";
+import {sky, backdrop} from "./scene.js";
+import {$,show,hide, rand, randomPoints} from "./utils.js";
 import Rocket from "./rocket.js";
 import Projectile from "./projectile.js";
 import Rainbow from "./rainbow.js";
@@ -11,6 +11,8 @@ import Player from "./player.js";
 import Terrain from "./terrain.js";
 
 const FOREGROUND_OFFSET = 0.65;
+const BACKGROUND_HEIGHT = 0.3;
+
 let input = {};
 
 const mpEnabled = (window.Wavedash);
@@ -28,18 +30,21 @@ export function loop() {
     //sky
     sky(state.t);
 
+    backdrop(parralax, BACKGROUND_HEIGHT);
+
     // Foreground
     state.terrain.render();
 
     if (!state.match.shotMade && state.match.turnCountdown > 0) {
-        $('turn-timer').innerHTML = Math.round((state.match.turnCountdown - Date.now()) / 1000);
         $('current-angle').innerHTML = Math.round(currentPlayer.angle);
         $('current-speed').style.width = `calc(${(currentPlayer.speed / 50) * 100}% - 8px)`;
         $('current-fuel').style.width = `calc(${(state.match.currentPlayerFuel / config.FUEL_PER_TURN) * 100}% - 8px)`;
     
         if (input[32]) {
-            currentPlayer.speed = Math.min(currentPlayer.speed + 0.2, 50);
-            if (currentPlayer.speed === 50) playerShoot();
+            if (currentPlayer.ammo[currentPlayer.currentWeapon] > 0) {
+                currentPlayer.speed = Math.min(currentPlayer.speed + 0.2, 50);
+                if (currentPlayer.speed === 50) playerShoot();
+            }
         }
         if (input[38] || input[40]) {
             var dir = input[38] ? 1 : -1;
@@ -54,6 +59,7 @@ export function loop() {
     }
 
     state.players.forEach((p) => {
+        p.playing = state.players[state.match.currentPlayerTurn] === p && !state.match.shotMade;
         p.tick();
         p.render();
     });
@@ -76,7 +82,38 @@ export function loop() {
 
     }
 
+    Projectile.renderParticles();
+
     printFrame();
+
+    // wind direction
+    ctx.save();
+    ctx.translate(540, 40);
+    ctx.rotate((state.windDirection + 90) * (Math.PI / 180));
+    ctx.beginPath();
+    ctx.moveTo(0,-14);
+    ctx.lineTo(12,14);
+    ctx.lineTo(-12,14);
+    ctx.closePath();
+    const windGRadient = ctx.createLinearGradient(0, 0, -14, 30);
+    windGRadient.addColorStop(0, "lightblue");
+    windGRadient.addColorStop(1, "blue");
+    ctx.fillStyle = windGRadient;
+    ctx.lineWidth = 1;
+    ctx.fill();
+    ctx.strokeStyle = 'white';
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.textAlign = 'center';
+    ctx.font = 'normal bolder 16px sans-serif';
+    ctx.fillStyle = '#999';
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = 'black';
+    ctx.lineJoin = "round";
+            
+    ctx.strokeText(Math.round(state.windStrength), 540, 20);
+    ctx.fillText(Math.round(state.windStrength), 540, 20);
 }
 
 export const nav = [[$('return'), lobby]];
@@ -105,8 +142,10 @@ export const load = () => {
         state.terrain = new Terrain(256, Math.round(a.height * FOREGROUND_OFFSET), 0.5, config.TERRAIN_ROUGHNESS, -6, 6, Math.round(a.height * FOREGROUND_OFFSET), a.width * 2);
     }
 
-
     currentPlayer = mpEnabled ? state.players.find(p => p.id === state.id) : state.players[0];
+
+    $('prev-weapon').addEventListener('click', () => currentPlayer.changeWeapon(-1));
+    $('next-weapon').addEventListener('click', () => currentPlayer.changeWeapon(1));
 
     state.players.forEach((p, i) => {
         p.behavior = Player.BEHAVIORS.PLAYER;
@@ -128,10 +167,14 @@ function playerShoot() {
     input = {};
     clearTimeout(state.match.turnTimer);
 
-    let missile = new Rainbow(Projectile.BEHAVIORS.PLAYER);
-    missile.fire(state.players[state.match.currentPlayerTurn].x, state.players[state.match.currentPlayerTurn].y, state.players[state.match.currentPlayerTurn].angle, state.players[state.match.currentPlayerTurn].speed);
+    const cp = state.players[state.match.currentPlayerTurn];
+    let missile = new cp.weapons[cp.currentWeapon](Projectile.BEHAVIORS.PLAYER);
+    missile.fire(cp.x, cp.y, cp.angle, cp.speed);
     state.match.currentMissile = missile;
-    missile.owner = state.players[state.match.currentPlayerTurn];
+    missile.owner = cp;
+    cp.ammo[cp.currentWeapon]--;
+
+    if (cp === currentPlayer) $('last-shot').style.marginLeft = `calc(${(currentPlayer.speed / 50) * 100}% - 8px)`;
 }
 
 function endTurn() {
@@ -139,6 +182,8 @@ function endTurn() {
     window.onkeyup = () => {};
     window.onkeydown = () => {};
     input = {};
+
+    if (state.match.gameTimer > config.MAX_MATCH_DURATION) return;
 
     state.match.gameTimer++;
     state.match.shotMade = false;
@@ -149,6 +194,10 @@ function endTurn() {
         else return endMatch();
     }
 
+    if (state.match.gameTimer === 1 || (state.match.gameTimer +1) % 4 === 0) {
+        state.windDirection = rand(0, 180);
+        state.windStrength = rand(0, 30);
+    }
     state.players[state.match.currentPlayerTurn].speed = 0;
     state.match.currentPlayerFuel = config.FUEL_PER_TURN;
     state.match.turnTimer = setTimeout(endTurn, config.TURN_DURATION);
@@ -156,14 +205,16 @@ function endTurn() {
 
     announcer(`Player ${state.match.currentPlayerTurn + 1}'s turn`);
     $('announcer').innerHTML = `Player ${state.match.currentPlayerTurn + 1}'s turn`;
+    $('total').innerHTML = `${config.MAX_MATCH_DURATION - state.match.gameTimer + 1} turns left`;
     show($('announcer'));
+    currentPlayer.changeWeapon(0);
     setTimeout(() => hide($('announcer')), 3000);
 
     if (mpEnabled ? state.players[state.match.currentPlayerTurn].id === state.id : state.match.currentPlayerTurn === 0) {
         // Our turn, add hud listeners
         window.onkeyup = (e) => {
             input[e.keyCode] = 0;
-            if (e.keyCode === 32) playerShoot();
+            if (e.keyCode === 32 && currentPlayer.ammo[currentPlayer.currentWeapon] > 0) playerShoot();
         };
         window.onkeydown = (e) => {
             input[e.keyCode] = 1;
@@ -186,3 +237,4 @@ function endMatch() {
     state.match.scoreScreen = true;
 }
 
+const parralax = randomPoints(64, Math.round(a.height * BACKGROUND_HEIGHT), 0.6, config.TERRAIN_ROUGHNESS * 2, -10, 1);

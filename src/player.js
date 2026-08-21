@@ -1,7 +1,11 @@
-import { applyRecolor, rand } from "./utils.js";
+import { applyRecolor, rand, $ } from "./utils.js";
 import { osc } from "./canvas.js";
 import config from "./config.js";
 import {a,c} from "./canvas.js";
+import Rocket from "./rocket.js";
+import Grenade from "./grenade.js";
+import Bullet from "./bullet.js";
+import Rainbow from "./rainbow.js";
 
 const sc = (config.SPRITE_SIZE * config.SCALE_RATIO) / 2;
 
@@ -14,6 +18,10 @@ export default class Player {
     frameOffset = [0,0]
     speed = 0;
     angle = 45;
+    ammo = [Infinity, 3, 3, 1];
+    weapons = [Rocket, Grenade, Bullet, Rainbow];
+    currentWeapon = 0;
+    playing = false;
 
     static BEHAVIORS = {
         DEMO: 0,
@@ -29,7 +37,7 @@ export default class Player {
         DAMAGE: 3,
         VICTORY: 4,
         DEAD: 5,
-        FALLING: 6
+        DYING: 7,
     }
 
     static ANIMATION_SPEED = {
@@ -166,6 +174,10 @@ export default class Player {
         const cx = this.x + size / 2;
         const cy = this.y + size / 2;
 
+        c.strokeStyle = 'black';
+        c.lineWidth = 4;
+        c.lineJoin = "round";
+
         c.save();
         c.translate(cx, cy);
         c.scale(this.face, 1);
@@ -180,28 +192,61 @@ export default class Player {
             config.SPRITE_SIZE * config.SCALE_RATIO,
             config.SPRITE_SIZE * config.SCALE_RATIO
         );
+        if (this.playing) {
+            c.beginPath();
+            c.moveTo(-size / 2, 0);
+            c.arc(-size / 2, 0, size, 190 * Math.PI / 180, 260 * Math.PI / 180, false);
+            c.closePath();
+            c.globalAlpha = 0.4;
+            c.fillStyle = 'white';
+            c.fill();
+            c.strokeStyle = 'grey';
+            c.globalAlpha = 1;
+            c.lineWidth = 1;
+            c.stroke();
+            c.lineWidth = 4;
+            c.strokeStyle = 'blue';
+            c.beginPath();
+            c.moveTo(-size / 2, 0);
+            c.lineTo(-size / 2 + Math.cos((this.angle < 0 ? this.angle *-1 +180 : this.angle + 180) * Math.PI / 180) * size, Math.sin((this.angle < 0 ? this.angle * -1 +180: this.angle + 180) * Math.PI / 180) * size);
+            c.stroke();
+        }
         c.restore();
-
-        c.strokeStyle = 'black';
-        c.lineWidth = 4;
-        c.lineJoin = "round";
 
         // hpbar
         if (this.behavior === Player.BEHAVIORS.PLAYER && this.hp > 0) {
-            c.strokeStyle
             c.strokeRect(this.x, this.y - 8, (config.SPRITE_SIZE * config.SCALE_RATIO), 9);
             c.fillStyle = 'red';
             c.fillRect(this.x, this.y - 8, (this.hp/100) * (config.SPRITE_SIZE * config.SCALE_RATIO), 9);
         }
 
         // Display name (should probably render once in an osc)
-        c.save();
         c.textAlign = 'center';
         c.font = 'normal bolder 18px sans-serif';
         c.fillStyle = this.hp > 0 ? 'white' : '#333';
         
         c.strokeText(this.name, this.x + (config.SPRITE_SIZE * config.SCALE_RATIO) /2, this.y + (this.hp > 0 ? -16 : 16));
         c.fillText(this.name, this.x + (config.SPRITE_SIZE * config.SCALE_RATIO) /2, this.y + (this.hp > 0 ? -16 : 16));
-        c.restore();
+
+        if (this.playing) {
+            c.beginPath();
+            c.moveTo(this.x + 24, this.y - 54);
+            c.lineTo(this.x + (config.SPRITE_SIZE * config.SCALE_RATIO) - 24, this.y - 54);
+            c.lineTo(this.x + (config.SPRITE_SIZE * config.SCALE_RATIO) /2, this.y - 36);
+            c.closePath();
+            c.fillStyle = 'green';
+            c.fill();
+            c.fillStyle = 'black';
+            c.fillText(Math.round((state.match.turnCountdown - Date.now()) / 1000), this.x + (config.SPRITE_SIZE * config.SCALE_RATIO) /2, this.y -64);
+        }
+    }
+
+    changeWeapon(dir) {
+        this.currentWeapon += dir;
+        if (this.currentWeapon < 0) this.currentWeapon = 3;
+        if (this.currentWeapon > 3) this.currentWeapon = 0;
+
+        $('weapon-icon').innerHTML = this.weapons[this.currentWeapon].icon;
+        $('current-ammo').innerHTML = this.ammo[this.currentWeapon];
     }
 }

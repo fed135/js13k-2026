@@ -4,7 +4,7 @@ import { a,c, cleanCanvas, printFrame } from './canvas.js';
 import Unicorns from "./player.js";
 import config from "./config.js";
 import {sky, backdrop, mound} from "./scene.js";
-import { randomBase, hexToRgb, randomPoints, $, hide, show } from "./utils.js";
+import { randomBase, hexToRgb, randomPoints, $, hide, show, rand } from "./utils.js";
 import Rainbow from './rainbow.js';
 import Projectile from "./projectile.js";
 import Terrain from "./terrain.js";
@@ -119,7 +119,7 @@ export const load = () => {
     }
 
     for (let i = 0; i < 4; i++ ) {
-        const player = new Unicorns(randomBase(), [255,255,255], uniNames[i], Unicorns.BEHAVIORS.DEMO);
+        const player = new Unicorns(randomBase(), [rand(128,255),rand(128,255),rand(128,255)], uniNames[i], Unicorns.BEHAVIORS.DEMO);
         player.x = a.width * (0.2 * (i + 1)) - (config.SPRITE_SIZE * config.SCALE_RATIO) / 2;
         player.y = a.height * MOUND_HEIGHT - (config.SPRITE_SIZE * config.SCALE_RATIO);
         if (!mpEnabled && i === 0) player.id = 1;

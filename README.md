@@ -26,26 +26,41 @@ npm run publish
 Uploads the build to [Wavedash](https://wavedash.com/dev-portal/fed135)
 
 
-## TODO:
+## Step 1 (Build the game):
 
-- [ ] Create damage and death flow
-- [ ] change weapons
+- [x] Create damage and death flow
+- [x] change weapons + ammo
 - [ ] instructions
 - [ ] Total match turns indicator ( + option to change ?)
-- [ ] Wind indicator + changes
+- [x] Wind indicator + changes
+- [ ] Winner indicator
 - [ ] Better bots
-- [ ] Angle preview + last speed indicator
+- [x] Angle preview + last speed indicator
 - [ ] Players reaching bottom (hp 0)
-- [ ] Fix viewport size (make everything absolute 1080x600)
-- [ ] Make match gameplay
-- [ ] Handle arrow inputs and holding space to charge.
+- [x] Fix viewport size (make everything absolute 1080x600)
+- [x] Make match gameplay
+- [x] Handle arrow inputs and holding space to charge.
 - [ ] Test out networking on Wavedash
-- [ ] Create particle system (reuse ballistic physics)
+- [x] Create particle system (reuse ballistic physics)
 - [ ] Finish sprites
 - [ ] Polish UI + more animations + particles + gore ?
 - [ ] Optimize perf
-- [ ] Optimize size
 - [ ] Bugs (replayability) 
+
+
+Size after step 1:
+
+
+## Step 2 (Size optimization) 
+
+In order of priority
+
+- GCC Advanced compilation (needs to have all window properties explicitly labeled) (~2kb)
+- Merge all code files (removes import structure) + hoist state objects to prevent needless injection (~2kb)
+- Minify HTML + CSS (~2kb estimated)
+  - [Online minifier](https://j9t.github.io/html-minifier-next/)
+
+- Determine if we keep Wavedash online multipayer or choose local multiplayer... or neither
 
 ## Ideas:
 
