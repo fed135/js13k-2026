@@ -87,16 +87,9 @@ export const load = () => {
         Wavedash.on(Wavedash.Events.LOBBY_MESSAGE, userAction);
 
         if (state.lobby) {
-            const unsubscribeLobbyJoined = Wavedash.on(Wavedash.Events.LOBBY_JOINED, (payload) => {
-            console.log(`Joined lobby ${payload.lobbyId}`);
-            });
-            Wavedash.on(Wavedash.Events.LOBBY_MESSAGE, (payload) => {
-            console.log(`${payload.username}: ${payload.message}`);
-            });
-
             Wavedash.joinLobby(state.lobby).then(() => {
-                hide($('picker'));
                 hide($('start-match'));
+                refreshPlayers();
             });
         }
         else {
@@ -175,7 +168,7 @@ function refreshPlayers() {
         state.players[i].id = u?.userId ?? null; // If no id, it's a BOT.
         if (u?.id === Wavedash.getUserId()) {
             currentPlayerIndex = i;
-            $('picker').style.marginLeft = `${110 + 100 * i}px`;
+            $('picker').style.marginLeft = `${110 + 212 * i}px`;
         }
     }
 }

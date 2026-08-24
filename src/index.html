@@ -3,8 +3,8 @@
     <style>
         * {--bg: #999; --bgLite: #ccc; --bgDark: #666; margin: 0; padding: 0; font-family: 'Courier New', monospace;  user-select: none; font-smooth: none; }
         body {background-color: #000; display: flex; align-items: center; justify-content: center;}
-        h1 { font-size: 6em; font-weight: bolder; text-align: center; animation: rainbow 4s linear infinite; margin-top: 6em;}
-        #credits {text-align: center; margin-top: 6em;}
+        h1 { font-size: 72px; font-weight: bolder; text-align: center; animation: rainbow 4s linear infinite; margin-top: 200px;}
+        #credits {text-align: center; margin-top: 100px;}
         a {animation: rainbow 4s linear infinite;}
         @keyframes rainbow {
           0% { color: #ff5; }
@@ -37,7 +37,7 @@
         #start-match { margin: auto; font-size: 32px; margin-top: 440px; display: block;}
         button:hover {outline: 6px solid var(--bgDark); border: 12px outset var(--bgLite);}
         button:active {outline: 6px solid var(--bgDark); border: 12px inset var(--bgDark); background-color: var(--bg); transform: translateY(4px); }
-        button { color: #333; background-color: var(--bg); padding: 0.88em; opacity: 0.88; border: 12px outset var(--bg); outline: 6px solid black; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px  1px 0 #000, 1px  1px 0 #000; font-weight: bold;}
+        button { color: #333; background-color: var(--bg); padding: 12px; opacity: 0.88; border: 12px outset var(--bg); outline: 6px solid black; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px  1px 0 #000, 1px  1px 0 #000; font-weight: bold;}
 
         .green {--bg: #090; --bgDark: #060; --bgLite: #0c0; color: white}
         .red {--bg: #900; --bgDark: #600; --bgLite: #c00; color: white}
@@ -111,11 +111,6 @@
 <div id="global">
     <button id="toggle-audio">&#x1F507;</button>
 </div>
-<div id="title">
-    <h1>MY LITTLE ARMAGEDDON</h1>
-    <div class="sub">(click anywhere to start)</div>
-    <div id="credits">A 13kb Javascript game by <a href="https://github.com/fed135" target="_blank" onclick="event.stopPropagation();">Frederic Charette</a></div>
-</div>
 
 <div id="accept-invite" class="hidden">
     <div class="menu">
@@ -126,6 +121,11 @@
     </div>
 </div>
 <div id="wrapper">
+    <div id="title">
+        <h1>MY LITTLE ARMAGEDDON</h1>
+        <div class="sub">(click anywhere to start)</div>
+        <div id="credits">A 13kb Javascript game by <a href="https://github.com/fed135" target="_blank" onclick="event.stopPropagation();">Frederic Charette</a></div>
+    </div>
     <canvas id="canvas">Oops...</canvas>
     <div id="lobby" class="hidden">
         <div id="lobby-owner" class="hidden"></div>
