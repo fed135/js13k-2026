@@ -129,7 +129,7 @@ export default class Projectile {
 
             // TODO detect collision with other players!
             for (let i = 0; i < state.players.length; i++) {
-                if (state.players[i] !== this.owner) {
+                if (state.players[i] !== this.owner && state.players[i].hp > 0) {
                     const p = state.players[i];
                     if (this.x + sc > p.x + config.SPRITE_SIZE && this.y + sc > p.y + config.SPRITE_SIZE && this.x + sc < p.x + sc * 2 && this.y + sc < p.y + sc * 2) {
                         return this.detonate(true);

@@ -47,10 +47,10 @@ export function mound(offsetX, offsetY, height) {
     //c.lineWidth = 6;
     c.beginPath();
     c.moveTo(Math.round(a.width * offsetX) - 600, a.height);
-    c.lineTo(Math.round(a.width * offsetX) - 250, Math.round(a.height * offsetY) + 100);
-    c.lineTo(Math.round(a.width * offsetX) - 150, Math.round(a.height * offsetY));
-    c.lineTo(Math.round(a.width * offsetX) + 150, Math.round(a.height * offsetY));
-    c.lineTo(Math.round(a.width * offsetX) + 250, Math.round(a.height * offsetY) + 100);
+    c.lineTo(Math.round(a.width * offsetX) - 200, Math.round(a.height * offsetY) + 100);
+    c.lineTo(Math.round(a.width * offsetX) - 80, Math.round(a.height * offsetY));
+    c.lineTo(Math.round(a.width * offsetX) + 80, Math.round(a.height * offsetY));
+    c.lineTo(Math.round(a.width * offsetX) + 200, Math.round(a.height * offsetY) + 100);
     c.lineTo(Math.round(a.width * offsetX) + 600, a.height);
     c.closePath();
     const soilGradient = c.createLinearGradient(0, a.height * offsetY, 0, a.height * height);

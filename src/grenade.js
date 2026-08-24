@@ -1,7 +1,7 @@
 import Projectile from "./projectile.js";
 
 export default class Grenade extends Projectile {
-    static icon = '&#x1F9E8;';
+    static icon = '&#x1F348;';
 
     constructor(behavior) {
         super(window.assets.grenade, [0,255,0], 80, 20, 320, 600, behavior);
@@ -20,6 +20,6 @@ export default class Grenade extends Projectile {
             this.bounce = false;
             return;
         }
-        super.detonate(offset);
+        super.detonate();
     }
 }

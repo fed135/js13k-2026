@@ -72,7 +72,6 @@ export default class Player {
             
             if (this.y < terrainY - (config.SPRITE_SIZE * config.SCALE_RATIO)) {
                 if (this.behavior !== Player.BEHAVIORS.LOBBY_CYCLE) {
-                    this.falling = true;
                     this.y += 7;
                     return;
                 }
@@ -100,6 +99,10 @@ export default class Player {
             case Player.STATES.AIMING:
                 this.frameOffset[1] = 0;
                 this.animationStep(state.t, Player.ANIMATION_SPEED.NEVER);
+                break;
+            case Player.STATES.VICTORY:
+                this.frameOffset[1] = 3;
+                this.frameOffset[0] = 1;
                 break;
             default: 
                 
@@ -192,7 +195,7 @@ export default class Player {
             config.SPRITE_SIZE * config.SCALE_RATIO,
             config.SPRITE_SIZE * config.SCALE_RATIO
         );
-        if (this.playing) {
+        if (this.playing && this.state !== Player.STATES.VICTORY) {
             c.beginPath();
             c.moveTo(-size / 2, 0);
             c.arc(-size / 2, 0, size, 190 * Math.PI / 180, 260 * Math.PI / 180, false);
@@ -228,7 +231,7 @@ export default class Player {
         c.strokeText(this.name, this.x + (config.SPRITE_SIZE * config.SCALE_RATIO) /2, this.y + (this.hp > 0 ? -16 : 16));
         c.fillText(this.name, this.x + (config.SPRITE_SIZE * config.SCALE_RATIO) /2, this.y + (this.hp > 0 ? -16 : 16));
 
-        if (this.playing) {
+        if (this.playing && this.state !== Player.STATES.VICTORY) {
             c.beginPath();
             c.moveTo(this.x + 24, this.y - 54);
             c.lineTo(this.x + (config.SPRITE_SIZE * config.SCALE_RATIO) - 24, this.y - 54);

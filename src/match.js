@@ -17,13 +17,18 @@ let input = {};
 
 const mpEnabled = (window.Wavedash);
 let currentPlayer;
+let winnerSpectacle;
 
-const preparedShot = {angle: 45, speed: 0};
+const NETWORK_ACTIONS = {
+    INIT: 10,
+    END_TURN: 11,
+    SHOT: 12,
+    WIND_CHANGE: 13,
+    MOVE: 14
+}
+
 
 export function loop() {
-    if (state.match.scoreScreen) return;
-    if (state.match.gameTimer > config.MAX_MATCH_DURATION) return endMatch();
-
     //clear
     cleanCanvas();
 
@@ -50,12 +55,14 @@ export function loop() {
             var dir = input[38] ? 1 : -1;
             const newAngle = Math.min(80, Math.max(10, Math.abs(currentPlayer.angle) + dir));
             currentPlayer.angle = (currentPlayer.face * -1) * newAngle;
-            
         }
         if (input[37] || input[39]) {
             var dir = input[37] ? -1 : 1;
             currentPlayer.move(dir);
+
+            if (mpEnabled && state.t % 10 === 0) Wavedash.sendLobbyMessage(state.lobby, `${NETWORK_ACTIONS.MOVE},${currentPlayer.x}`);
         }
+        if (!input[37] && !input[39]) currentPlayer.changeState(Player.STATES.IDLE);
     }
 
     state.players.forEach((p) => {
@@ -77,9 +84,9 @@ export function loop() {
         }
     }
     else {
+        
         //resetCamera(60);
         moveCamera([state.players[state.match.currentPlayerTurn].x - 540, state.players[state.match.currentPlayerTurn].y -300, 1080, 600], 20);
-
     }
 
     Projectile.renderParticles();
@@ -116,7 +123,7 @@ export function loop() {
     ctx.fillText(Math.round(state.windStrength), 540, 20);
 }
 
-export const nav = [[$('return'), lobby]];
+export const nav = [];
 
 export const hud = $('match');
 
@@ -134,13 +141,7 @@ export const load = () => {
         currentPlayerFuel: config.FUEL_PER_TURN,
     }
 
-    // if mp, wait for host to send the terrain coords
-    if (mpEnabled) {
-
-    }
-    else {
-        state.terrain = new Terrain(256, Math.round(a.height * FOREGROUND_OFFSET), 0.5, config.TERRAIN_ROUGHNESS, -6, 6, Math.round(a.height * FOREGROUND_OFFSET), a.width * 2);
-    }
+    state.terrain = new Terrain(256, Math.round(a.height * FOREGROUND_OFFSET), 0.5, config.TERRAIN_ROUGHNESS, -6, 6, Math.round(a.height * FOREGROUND_OFFSET), a.width * 2);
 
     currentPlayer = mpEnabled ? state.players.find(p => p.id === state.id) : state.players[0];
 
@@ -151,14 +152,57 @@ export const load = () => {
         p.behavior = Player.BEHAVIORS.PLAYER;
         if (i < 2) p.face *= -1;
         p.x = state.terrain.width * (0.2 * (i + 1)) - (config.SPRITE_SIZE * config.SCALE_RATIO) / 2;
+        p.index = i;
     });
 
-    endTurn();
+    // if mp, wait for host to send the terrain coords
+    if (mpEnabled) {
+        Wavedash.on(Wavedash.Events.LOBBY_MESSAGE, userAction);
+
+        if (currentPlayer.isHost) {
+            Wavedash.sendLobbyMessage(state.lobby, `${NETWORK_ACTIONS.INIT},${JSON.stringify(state.terrain.coords)}`);
+        }
+    }
+    else {
+        // start the game
+        endTurn();
+    }
 };
-export const unload = () => {};
+export const unload = () => {
+    clearInterval(winnerSpectacle);
+    Wavedash.off(Wavedash.Events.LOBBY_MESSAGE, userAction);
+};
 
+function userAction(a) {
+    console.log('Network message', a);
+     switch(a.message[0]) {
+            case NETWORK_ACTIONS.INIT: 
+                state.terrain.coords = JSON.parse(a.message.substring(2));
+                break;
+            case NETWORK_ACTIONS.END_TURN:
+                endTurn(true); //noloop
+                break;
+            case NETWORK_ACTIONS.MOVE:
+                state.players.find((p) => p.name === a.username).x = Number(a.message.substring(2));
+                break;
+            case NETWORK_ACTIONS.WIND_CHANGE:
+                const newWind = a.message.split(',');
+                state.windDirection = Number(newWind[1]);
+                state.windStrength = Number(newWind[2]);
+                break;
+            case NETWORK_ACTIONS.SHOT:
+                const shot = a.message.split(',');
+                const from = state.players.find((p) => p.name === a.username);
+                from.currentWeapon = shot[1];
+                from.x = shot[2];
+                from.y = shot[3];
+                from.angle = shot[4];
+                from.speed = shot[5];
+                playerShoot(true); //noloop
+        }
+}
 
-function playerShoot() {
+function playerShoot(noloop) {
     state.match.shotMade = true;
     //if (state.players[state.match.currentPlayerTurn].id )
     // reset hud
@@ -175,15 +219,20 @@ function playerShoot() {
     cp.ammo[cp.currentWeapon]--;
 
     if (cp === currentPlayer) $('last-shot').style.marginLeft = `calc(${(currentPlayer.speed / 50) * 100}% - 8px)`;
+    if (mpEnabled && !noloop) Wavedash.sendLobbyMessage(state.lobby, `${NETWORK_ACTIONS.SHOT},${cp.currentWeapon},${cp.x},${cp.y},${cp.angle},${cp.speed}`);
 }
 
-function endTurn() {
+function endTurn(noloop) {
     // reset hud
     window.onkeyup = () => {};
     window.onkeydown = () => {};
     input = {};
+    currentPlayer.changeState(Player.STATES.IDLE);
 
-    if (state.match.gameTimer > config.MAX_MATCH_DURATION) return;
+    // if host, communicate end of turn to others
+    if (mpEnabled && currentPlayer.isHost && !noloop) Wavedash.sendLobbyMessage(state.lobby, ''+NETWORK_ACTIONS.END_TURN);
+
+    if (state.match.gameTimer >= config.MAX_MATCH_DURATION) return endMatch();
 
     state.match.gameTimer++;
     state.match.shotMade = false;
@@ -195,12 +244,14 @@ function endTurn() {
     }
 
     if (state.match.gameTimer === 1 || (state.match.gameTimer +1) % 4 === 0) {
-        state.windDirection = rand(0, 180);
-        state.windStrength = rand(0, 30);
+        sfx(config.S.shot, [300, 400], 5);
+        state.windDirection = Math.round(rand(0, 180));
+        state.windStrength = Math.round(rand(0, 30));
+        if (mpEnabled && currentPlayer.isHost) Wavedash.sendLobbyMessage(state.lobby, `${NETWORK_ACTIONS.WIND_CHANGE},${state.windDirection},${state.windStrength}`);
     }
     state.players[state.match.currentPlayerTurn].speed = 0;
     state.match.currentPlayerFuel = config.FUEL_PER_TURN;
-    state.match.turnTimer = setTimeout(endTurn, config.TURN_DURATION);
+    if ((mpEnabled && currentPlayer.isHost) || !mpEnabled)state.match.turnTimer = setTimeout(endTurn, config.TURN_DURATION);
     state.match.turnCountdown = Date.now() + config.TURN_DURATION;
 
     announcer(`Player ${state.match.currentPlayerTurn + 1}'s turn`);
@@ -234,7 +285,19 @@ function endTurn() {
 
 function endMatch() {
     show($('game-over'));
+    const winner = state.players.reduce((best, p) => p.hp > best.hp ? p : best);
+    announcer(`Player ${winner.name} has won!`);
+    $('announcer').innerHTML = `Player ${winner.name} has won!`;
+    show($('announcer'));
     state.match.scoreScreen = true;
+    moveCamera([winner.x - 540, winner.y -300, 1080, 600], 20);
+    winner.changeState(Player.STATES.VICTORY);
+    state.match.currentPlayerTurn = winner.index;
+    winnerSpectacle = setInterval(() => {
+        Projectile.particleSystem(winner.x + rand(-50, 50), winner.y + rand(-50, 50), [rand(128,255), rand(128,255), rand(128,255)], 50, 500);
+        winner.face *= -1;
+    },1500);
+    state.windStrength = 0;
 }
 
 const parralax = randomPoints(64, Math.round(a.height * BACKGROUND_HEIGHT), 0.6, config.TERRAIN_ROUGHNESS * 2, -10, 1);

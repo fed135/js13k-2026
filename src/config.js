@@ -16,7 +16,7 @@ export default {
     SCALE_RATIO: 3,
     GAME_WIDTH: 1080,
     GAME_HEIGHT: 600,
-    MAX_MATCH_DURATION: 40,
+    MAX_MATCH_DURATION: 10,
     TURN_DURATION: 15000,
     FUEL_PER_TURN: 120,
 
@@ -48,6 +48,6 @@ export default {
     S: {
         airtime: 0,
         detonation: 1,
-        shot: 2
+        shot: 2,
     }
 };

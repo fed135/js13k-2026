@@ -7,7 +7,7 @@ import {loadAtlas} from "./loader.js";
 window.state = {t:0, gravity: 1};
 (async () => {
     window.assets = await loadAtlas('./sprite.gif', {
-        unicorn: { x: 0, y: 0, w: 128, h: 64 },
+        unicorn: { x: 0, y: 0, w: 128, h: 128 },
         rocket: {x:0, y: 64, w: 32, h: 32 },
         star: {x:32, y: 64, w:32, h:32},
         grenade: {x:64, y: 64, w:32, h: 32},
@@ -33,7 +33,6 @@ window.navigateScene = (toScene) => {
     window.currentScene?.unload();
 
     state.t = 0;
-    //announcer("Say the line Bart!");
 
     // Reset input handlers
 

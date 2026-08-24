@@ -1,6 +1,6 @@
 import { playTrack } from "./audio.js";
 import * as match from "./match.js";
-import { a,c, cleanCanvas, printFrame } from './canvas.js';
+import { a,c, cleanCanvas, printFrame, resetCamera } from './canvas.js';
 import Unicorns from "./player.js";
 import config from "./config.js";
 import {sky, backdrop, mound} from "./scene.js";
@@ -19,6 +19,12 @@ const cyclingUnicorns = [];
 const mpEnabled = (window.Wavedash);
 
 let uniNames = ['Player', 'BOT Dolly', 'BOT Jolly', 'BOT Denis'];
+let currentPlayerIndex = 0;
+
+const NETWORK_ACTIONS = {
+    COLOR_CHANGE: 0,
+    START_MATCH: 1
+}
 
 let demoRockets = [];
 
@@ -69,6 +75,7 @@ export const load = () => {
     state.windDirection = 0;
     state.windStrength = 0;
     state.players = [];
+    resetCamera();
     state.terrain = new Terrain(128, Math.round(a.height * FOREGROUND_OFFSET), 0.5, config.TERRAIN_ROUGHNESS, -3, 3, Math.round(a.height * FOREGROUND_OFFSET), a.width);
     hide($('lobby-owner'));
 
@@ -76,26 +83,20 @@ export const load = () => {
         $('name').value = state.username;
         $('name').disabled = true;
 
-        if (state.lobby) {
-            Wavedash.joinLobby(state.lobby).then(() => {
-                const users = Wavedash.getLobbyUsers(state.lobby);
+        Wavedash.on(Wavedash.Events.LOBBY_USERS_UPDATED, refreshPlayers);
+        Wavedash.on(Wavedash.Events.LOBBY_MESSAGE, userAction);
 
+        if (state.lobby) {
+            const unsubscribeLobbyJoined = Wavedash.on(Wavedash.Events.LOBBY_JOINED, (payload) => {
+            console.log(`Joined lobby ${payload.lobbyId}`);
+            });
+            Wavedash.on(Wavedash.Events.LOBBY_MESSAGE, (payload) => {
+            console.log(`${payload.username}: ${payload.message}`);
+            });
+
+            Wavedash.joinLobby(state.lobby).then(() => {
                 hide($('picker'));
                 hide($('start-match'));
-                users.forEach((u, i) => {
-                    if (u.isHost) {
-                        show($('lobby-owner'));
-                        $('lobby-owner').innerHTML = `${u.username}'s lobby`;
-                    }
-                    state.players[i].name = u.username;
-                    state.players[i].id = u.userId; // If no id, it's a BOT.
-                });
-
-                const message = Wavedash.readP2PMessageFromChannel(0);
-                if (message) {
-                    console.log(`From: ${message.fromUserId}, Data: ${message.payload}`);
-                    navigateScene(match);
-                }
             });
         }
         else {
@@ -114,7 +115,8 @@ export const load = () => {
         }
 
         $('start-match').addEventListener((e) => {
-            Wavedash.broadcastP2PMessage(0, true, new Uint8Array([1, 2, 3]));
+            console.log('starting match in mp!')
+            Wavedash.sendLobbyMessage(state.lobby, ''+NETWORK_ACTIONS.START_MATCH);
         });
     }
 
@@ -137,28 +139,62 @@ export const load = () => {
         demoRockets.push(new Rainbow(Projectile.BEHAVIORS.DEMO));
     }
 
-    // TODO: player info storage between scenes
-    //state.baseColor = players[0].baseColor;
-    //state.hatColor = players[0].hatColor;
-
     window.updateColor = (e) => {
         let c = hexToRgb(e.target.value);
         // Prevent full black
         if (c.join() === '0,0,0') c = [1,0,0];
 
-        state.players[0].recolor(state.players[0].hatColor, c);
-        state.players[0].hatColor = c;
+        setColor(currentPlayerIndex, c);
+        // if mp, send it to other players
+        if (mpEnabled) Wavedash.sendLobbyMessage(state.lobby, ''+NETWORK_ACTIONS.COLOR_CHANGE+','+c.join(','));
     }
 
     window.updateName = (e) => {
-        // TODO: find actual player
-        state.players[0].name = e.target.value;
+        // option not available in mp
+        state.players[currentPlayerIndex].name = e.target.value;
     }
 
 }
 
-export const unload = () => {
+function setColor(playerIndex, value) {
+    state.players[playerIndex].recolor(state.players[playerIndex].hatColor, value);
+    state.players[playerIndex].hatColor = value;
+}
 
+function refreshPlayers() {
+    const users = Wavedash.getLobbyUsers(state.lobby);
+
+    for (let i = 0; i < 4; i++) {
+        const u = users[i];
+        if (u?.isHost) {
+            show($('lobby-owner'));
+            state.players[i].isHost = true;
+            $('lobby-owner').innerHTML = `${u.username}'s lobby`;
+        }
+        state.players[i].name = u?.username ?? uniNames[i];
+        state.players[i].id = u?.userId ?? null; // If no id, it's a BOT.
+        if (u?.id === Wavedash.getUserId()) {
+            currentPlayerIndex = i;
+            $('picker').style.marginLeft = `${110 + 100 * i}px`;
+        }
+    }
+}
+
+function userAction(a) {
+    switch(a.message[0]) {
+        case NETWORK_ACTIONS.COLOR_CHANGE: 
+            setColor(state.players.findIndex(p => p.name === a.username), a.message.split(',').splice(1,3));
+            break;
+        case NETWORK_ACTIONS.START_MATCH:
+            return navigateScene(match);
+    }
+}
+
+export const unload = () => {
+    if (mpEnabled) {
+        Wavedash.off(Wavedash.Events.LOBBY_USERS_UPDATED, refreshPlayers);
+        Wavedash.off(Wavedash.Events.LOBBY_MESSAGE, userAction);
+    }
 }
 
 //-----------------------------

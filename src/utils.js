@@ -52,7 +52,7 @@ export function randomPoints(amount, startingValue, variation, roughness, min, m
     const points = [startingValue];
     for(let i = 0; i < amount; i++ ) {
         if (Math.random() < variation) {
-            points.push(Math.min((max ?? Infinity) * roughness, Math.max((min ?? -Infinity) * roughness, Math.round((points[points.length -1] + ((Math.random() * 0.1) - 0.05) * roughness)))));
+            points.push(Math.round(Math.min((max ?? Infinity) * roughness, Math.max((min ?? -Infinity) * roughness, Math.round((points[points.length -1] + ((Math.random() * 0.1) - 0.05) * roughness))))));
         }
         else points.push(points[points.length -1]);
     }

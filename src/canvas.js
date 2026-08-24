@@ -42,7 +42,7 @@ export function moveCamera(coords, speed) {
 }
 
 export function resetCamera(speed) {
-   moveCamera([0, 0, config.GAME_WIDTH, config.GAME_HEIGHT], speed);
+   moveCamera([0, 0, config.GAME_WIDTH, config.GAME_HEIGHT], speed ?? 1);
 }
 
 export function printFrame() {
