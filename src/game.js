@@ -65,11 +65,13 @@ const icons = ['&#x1F680;','&#x1F348;', '&#x26A1;', '&#x1F308;'];
 const NETWORK_ACTIONS = {
     COLOR_CHANGE: 0,
     START_MATCH: 1,
-    INIT: 10,
-    END_TURN: 11,
-    SHOT: 12,
-    WIND_CHANGE: 13,
-    MOVE: 14
+    INIT: 2,
+    END_TURN: 3,
+    SHOT: 4,
+    WIND_CHANGE: 5,
+    MOVE: 6,
+    INIT2: 7,
+    INIT3: 8,
 };
 
 let assets;
@@ -1348,6 +1350,8 @@ const match = {
 
         backdrop(parralax, config.BACKGROUND_HEIGHT);
 
+        if(state.match.currentPlayerTurn < 0) return;
+
         // Foreground
         state.terrain.render();
 
@@ -1463,10 +1467,14 @@ const match = {
 
         // if mp, wait for host to send the terrain coords
         if (mpEnabled) {
-            window.Wavedash.on(window.Wavedash.Events.LOBBY_MESSAGE, userAction);
+            window.Wavedash.on("LobbyMessage", userAction);
 
             if (currentPlayer.isHost) {
-                window.Wavedash.sendLobbyMessage(state.lobby, `${NETWORK_ACTIONS.INIT},${JSON.stringify(state.terrain.coords)}`);
+                const coords = JSON.stringify(state.terrain.coords.map(c => c[0]));
+                window.Wavedash.sendLobbyMessage(state.lobby, `${NETWORK_ACTIONS.INIT},${coords.substring(0,400)}`);
+                window.Wavedash.sendLobbyMessage(state.lobby, `${NETWORK_ACTIONS.INIT2},${coords.substring(400,800)}`);
+                window.Wavedash.sendLobbyMessage(state.lobby, `${NETWORK_ACTIONS.INIT3},${coords.substring(800)}`);
+                setTimeout(() => endTurn(), 1000);
             }
         }
         else {
@@ -1476,21 +1484,28 @@ const match = {
     },
     unload: () => {
         clearInterval(winnerSpectacle);
-        window.Wavedash.off(window.Wavedash.Events.LOBBY_MESSAGE, userAction);
+        window.Wavedash.off("LobbyMessage", userAction);
     }
 };
 
+let terrainChunks = '';
+
 function userAction(a) {
     console.log('Network message', a);
-     switch(a.message[0]) {
+     switch(Number(a.message[0])) {
             case NETWORK_ACTIONS.COLOR_CHANGE: 
-                console.log('color change', state.players, a.message)
                 setColor(state.players.findIndex(p => p.name === a.username), a.message.split(',').splice(1,3));
                 break;
             case NETWORK_ACTIONS.START_MATCH:
                 return navigateScene(match);
-            case NETWORK_ACTIONS.INIT: 
-                state.terrain.coords = JSON.parse(a.message.substring(2));
+            case NETWORK_ACTIONS.INIT:
+            case NETWORK_ACTIONS.INIT2: 
+                terrainChunks += a.message.substring(2);
+                break;
+            case NETWORK_ACTIONS.INIT3: 
+                terrainChunks += a.message.substring(2);
+                state.terrain.coords = JSON.parse(terrainChunks).map(c => [c,c]);
+                console.log('terrain', state.terrain);
                 break;
             case NETWORK_ACTIONS.END_TURN:
                 endTurn(true); //noloop
@@ -1505,7 +1520,7 @@ function userAction(a) {
                 break;
             case NETWORK_ACTIONS.SHOT:
                 const shot = a.message.split(',');
-                const from = state.players.find((p) => p.name === a.username);
+                const from = state.players[state.match.currentPlayerTurn];
                 from.currentWeapon = shot[1];
                 from.x = shot[2];
                 from.y = shot[3];
@@ -1516,11 +1531,13 @@ function userAction(a) {
 }
 
 function playerShoot(noloop) {
+    if (mpEnabled && currentPlayer.isHost && noloop) return; // Prevent recursion
+
     state.match.shotMade = true;
     //if (state.players[state.match.currentPlayerTurn].id )
     // reset hud
-    window.onkeyup = () => {};
-    window.onkeydown = () => {};
+    window.removeEventListener('keyup', keyUp);
+    window.removeEventListener('keydown', keyDown);
     input = {};
     clearTimeout(state.match.turnTimer);
 
@@ -1537,12 +1554,13 @@ function playerShoot(noloop) {
 
 function endTurn(noloop) {
     // reset hud
-    window.onkeyup = () => {};
-    window.onkeydown = () => {};
+    window.removeEventListener('keyup', keyUp);
+    window.removeEventListener('keydown', keyDown);
     input = {};
     currentPlayer.changeState(Player.STATES.IDLE);
 
     // if host, communicate end of turn to others
+    if (mpEnabled && currentPlayer.isHost && noloop) return; // Prevent recursion
     if (mpEnabled && currentPlayer.isHost && !noloop) window.Wavedash.sendLobbyMessage(state.lobby, ''+NETWORK_ACTIONS.END_TURN);
 
     if (state.match.gameTimer >= config.MAX_MATCH_DURATION) return endMatch();
@@ -1552,7 +1570,7 @@ function endTurn(noloop) {
     state.match.currentPlayerTurn = (state.match.currentPlayerTurn + 1) % 4;
 
     if (state.players[state.match.currentPlayerTurn].hp <= 0) {
-        if (state.players.filter((p) => p.hp > 0).length > 1) return endTurn();
+        if (state.players.filter((p) => p.hp > 0).length > 1) return endTurn(noloop);
         else return endMatch();
     }
 
@@ -1576,16 +1594,11 @@ function endTurn(noloop) {
 
     if (mpEnabled ? state.players[state.match.currentPlayerTurn].id === state.id : state.match.currentPlayerTurn === 0) {
         // Our turn, add hud listeners
-        window.onkeyup = (e) => {
-            input[e.keyCode] = 0;
-            if (e.keyCode === 32 && currentPlayer.ammo[currentPlayer.currentWeapon] > 0) playerShoot();
-        };
-        window.onkeydown = (e) => {
-            input[e.keyCode] = 1;
-        };
+        window.addEventListener('keyup', keyUp);
+        window.addEventListener('keydown', keyDown);
     }
 
-    if (!state.players[state.match.currentPlayerTurn].id) {
+    if (!state.players[state.match.currentPlayerTurn].id && ((mpEnabled && currentPlayer.isHost) || !mpEnabled)) {
         // It's a bot... try to aim...?
         setTimeout(() => {
             state.players[state.match.currentPlayerTurn].angle = rand(20, 60) * state.players[state.match.currentPlayerTurn].face * -1;
@@ -1594,6 +1607,19 @@ function endTurn(noloop) {
             playerShoot();
         }, rand(3000, 6000));
     }
+}
+
+function keyUp(e) {
+    console.log('keyUp', e);
+    input[e.keyCode] = 0;
+    if (e.keyCode === 32 && currentPlayer.ammo[currentPlayer.currentWeapon] > 0) playerShoot();
+    e.preventDefault();
+}
+
+function keyDown(e) {
+    console.log('keyDown', e);
+    input[e.keyCode] = 1;
+    e.preventDefault();
 }
 
 function endMatch() {
@@ -1626,6 +1652,8 @@ let uniNames = ['Player', 'BOT Dolly', 'BOT Jolly', 'BOT Denis'];
 let currentPlayerIndex = 0;
 
 let demoRockets = [];
+
+let lobbyHost;
 
 const lobby = {
     loop: () => {
@@ -1675,40 +1703,6 @@ const lobby = {
         state.terrain = new Terrain(128, Math.round(a.height * config.LOBBY_FOREGROUND_OFFSET), 0.5, config.TERRAIN_ROUGHNESS, -3, 3, Math.round(a.height * config.LOBBY_FOREGROUND_OFFSET), a.width);
         hide($('lobby-owner'));
 
-        if (mpEnabled) {
-            $('name').value = state.username;
-            $('name').disabled = true;
-
-            window.Wavedash.on(window.Wavedash.Events.LOBBY_USERS_UPDATED, refreshPlayers);
-            window.Wavedash.on(window.Wavedash.Events.LOBBY_MESSAGE, userAction);
-
-            if (state.lobby) {
-                window.Wavedash.joinLobby(state.lobby).then(() => {
-                    hide($('start-match'));
-                    refreshPlayers();
-                });
-            }
-            else {
-                $('invite').style.display = 'block';
-
-                window.Wavedash.createLobby(window.Wavedash.LobbyVisibility.PRIVATE, 4).then((l) => {
-                    state.lobby = l.data;
-
-                    window.Wavedash.getLobbyInviteLink(true).then((res) =>  { $('invite-link').value = res.data });
-                });
-
-               $('copy-link').addEventListener('click', (e) => {
-                    navigator.clipboard.writeText($('invite-link').value);
-                    e.target.nextElementSibling.style.display='block';
-               });
-            }
-
-            $('start-match').addEventListener((e) => {
-                console.log('starting match in mp!')
-                window.Wavedash.sendLobbyMessage(state.lobby, ''+NETWORK_ACTIONS.START_MATCH);
-            });
-        }
-
         for (let i = 0; i < 4; i++ ) {
             const player = new Player(randomBase(), [rand(128,255),rand(128,255),rand(128,255)], uniNames[i], Player.BEHAVIORS.DEMO);
             player.x = a.width * (0.2 * (i + 1)) - (config.SPRITE_SIZE * config.SCALE_RATIO) / 2;
@@ -1726,6 +1720,47 @@ const lobby = {
 
         for (let i = 0; i < 8; i++ ) {
             demoRockets.push(new Rainbow(Projectile.BEHAVIORS.DEMO));
+        }
+
+        if (mpEnabled) {
+            $('name').value = state.username;
+            $('name').disabled = true;
+
+            window.Wavedash.on("LobbyUsersUpdated", refreshPlayers);
+            window.Wavedash.on("LobbyMessage", userAction);
+
+            if (state.lobby) {
+                window.Wavedash.joinLobby(state.lobby).then(() => {
+                    hide($('start-match'));
+                    refreshPlayers();
+                }).catch(e => {
+                    delete state.lobby;
+                    navigateScene(lobby);
+                });
+            }
+            else {
+                $('invite').style.display = 'block';
+
+                // 2: Private
+                window.Wavedash.createLobby(2, 4).then((l) => {
+                    state.lobby = l.data;
+                    lobbyHost = state.players[0];
+                    window.Wavedash.setLobbyData(state.lobby, 'ho', JSON.stringify([state.id]));
+
+                    window.Wavedash.getLobbyInviteLink(true).then((res) =>  { $('invite-link').value = res.data });
+
+                    refreshPlayers();
+                });
+
+               $('copy-link').addEventListener('click', (e) => {
+                    navigator.clipboard.writeText($('invite-link').value);
+                    e.target.nextElementSibling.style.display='block';
+               });
+            }
+
+            $('start-match').addEventListener((e) => {
+                window.Wavedash.sendLobbyMessage(state.lobby, ''+NETWORK_ACTIONS.START_MATCH);
+            });
         }
 
         window.updateColor = (e) => {
@@ -1746,8 +1781,8 @@ const lobby = {
     },
     unload: () => {
         if (mpEnabled) {
-            window.Wavedash.off(window.Wavedash.Events.LOBBY_USERS_UPDATED, refreshPlayers);
-            window.Wavedash.off(window.Wavedash.Events.LOBBY_MESSAGE, userAction);
+            window.Wavedash.off("LobbyUsersUpdated", refreshPlayers);
+            window.Wavedash.off("LobbyMessage", userAction);
         }
     }
 };
@@ -1757,11 +1792,27 @@ function setColor(playerIndex, value) {
     state.players[playerIndex].hatColor = value;
 }
 
-function refreshPlayers() {
+function refreshPlayers(e) {
     const users = window.Wavedash.getLobbyUsers(state.lobby);
+    const humans = JSON.parse(window.Wavedash.getLobbyData(state.lobby, 'ho')); // human order
+
+    // if host, we'll update the metadata
+    if (e && lobbyHost) {
+        if (e.changeType === "JOINED") humans.push(e.userId);
+        else {
+            const leftIndex = humans.findIndex(id => id === e.userId);
+            if (leftIndex > -1) humans.splice(leftIndex, 1);
+        }
+        window.Wavedash.setLobbyData(state.lobby, 'ho', JSON.stringify(humans));
+    }
+
+    // Reorder users based on humans
+    for(let i = 0; i < 4; i++) {
+        if (humans[i]) humans[i] = users.find(u => u.userId === humans[i]);
+    }
 
     for (let i = 0; i < 4; i++) {
-        const u = users[i];
+        const u = humans[i];
         if (u?.isHost) {
             show($('lobby-owner'));
             state.players[i].isHost = true;
@@ -1794,6 +1845,15 @@ const title = {
             if (params.lobby) {
                 show($('accept-invite'));
                 state.lobby = params.lobby;
+            }
+            else {
+                show($('lobby-id'));
+                show($('join-lobby'));
+
+                $('join-lobby').addEventListener('click', (e) => {
+                    state.lobby = $('lobby-id').value;
+                    navigateScene(lobby);
+                });
             }
         }
 
