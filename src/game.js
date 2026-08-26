@@ -1469,7 +1469,7 @@ const match = {
         if (mpEnabled) {
             window.Wavedash.on("LobbyMessage", userAction);
 
-            if (currentPlayer.isHost) {
+            if (currentPlayer['isHost']) {
                 const coords = JSON.stringify(state.terrain.coords.map(c => c[0]));
                 window.Wavedash.sendLobbyMessage(state.lobby, `${NETWORK_ACTIONS.INIT},${coords.substring(0,400)}`);
                 window.Wavedash.sendLobbyMessage(state.lobby, `${NETWORK_ACTIONS.INIT2},${coords.substring(400,800)}`);
@@ -1491,7 +1491,6 @@ const match = {
 let terrainChunks = '';
 
 function userAction(a) {
-    console.log('Network message', a);
      switch(Number(a.message[0])) {
             case NETWORK_ACTIONS.COLOR_CHANGE: 
                 setColor(state.players.findIndex(p => p.name === a.username), a.message.split(',').splice(1,3));
@@ -1505,12 +1504,12 @@ function userAction(a) {
             case NETWORK_ACTIONS.INIT3: 
                 terrainChunks += a.message.substring(2);
                 state.terrain.coords = JSON.parse(terrainChunks).map(c => [c,c]);
-                console.log('terrain', state.terrain);
                 break;
             case NETWORK_ACTIONS.END_TURN:
                 endTurn(true); //noloop
                 break;
             case NETWORK_ACTIONS.MOVE:
+                if (a.username === currentPlayer.name) return;
                 state.players.find((p) => p.name === a.username).x = Number(a.message.substring(2));
                 break;
             case NETWORK_ACTIONS.WIND_CHANGE:
@@ -1519,19 +1518,20 @@ function userAction(a) {
                 state.windStrength = Number(newWind[2]);
                 break;
             case NETWORK_ACTIONS.SHOT:
+                //4,0,384,313,45,0.6000000000000001
                 const shot = a.message.split(',');
                 const from = state.players[state.match.currentPlayerTurn];
-                from.currentWeapon = shot[1];
-                from.x = shot[2];
-                from.y = shot[3];
-                from.angle = shot[4];
-                from.speed = shot[5];
+                from.currentWeapon = parseInt(shot[1]);
+                from.x = parseInt(shot[2]);
+                from.y = parseInt(shot[3]);
+                from.angle = parseInt(shot[4]);
+                from.speed = parseInt(shot[5]);
                 playerShoot(true); //noloop
         }
 }
 
 function playerShoot(noloop) {
-    if (mpEnabled && currentPlayer.isHost && noloop) return; // Prevent recursion
+    if (mpEnabled && currentPlayer['isHost'] && noloop) return; // Prevent recursion
 
     state.match.shotMade = true;
     //if (state.players[state.match.currentPlayerTurn].id )
@@ -1553,17 +1553,17 @@ function playerShoot(noloop) {
 }
 
 function endTurn(noloop) {
-    // reset hud
-    window.removeEventListener('keyup', keyUp);
-    window.removeEventListener('keydown', keyDown);
-    input = {};
-    currentPlayer.changeState(Player.STATES.IDLE);
-
     // if host, communicate end of turn to others
     if (mpEnabled && currentPlayer.isHost && noloop) return; // Prevent recursion
     if (mpEnabled && currentPlayer.isHost && !noloop) window.Wavedash.sendLobbyMessage(state.lobby, ''+NETWORK_ACTIONS.END_TURN);
 
     if (state.match.gameTimer >= config.MAX_MATCH_DURATION) return endMatch();
+
+    // reset hud
+    window.removeEventListener('keyup', keyUp);
+    window.removeEventListener('keydown', keyDown);
+    input = {};
+    currentPlayer.changeState(Player.STATES.IDLE);
 
     state.match.gameTimer++;
     state.match.shotMade = false;
@@ -1578,11 +1578,11 @@ function endTurn(noloop) {
         sfx(config.S.shot, [300, 400], 5);
         state.windDirection = Math.round(rand(0, 180));
         state.windStrength = Math.round(rand(0, 30));
-        if (mpEnabled && currentPlayer.isHost) window.Wavedash.sendLobbyMessage(state.lobby, `${NETWORK_ACTIONS.WIND_CHANGE},${state.windDirection},${state.windStrength}`);
+        if (mpEnabled && currentPlayer['isHost']) window.Wavedash.sendLobbyMessage(state.lobby, `${NETWORK_ACTIONS.WIND_CHANGE},${state.windDirection},${state.windStrength}`);
     }
     state.players[state.match.currentPlayerTurn].speed = 0;
     state.players[state.match.currentPlayerTurn].currentFuel = config.FUEL_PER_TURN;
-    if ((mpEnabled && currentPlayer.isHost) || !mpEnabled)state.match.turnTimer = setTimeout(endTurn, config.TURN_DURATION);
+    if ((mpEnabled && currentPlayer['isHost']) || !mpEnabled)state.match.turnTimer = setTimeout(endTurn, config.TURN_DURATION);
     state.match.turnCountdown = Date.now() + config.TURN_DURATION;
 
     announcer(`Player ${state.match.currentPlayerTurn + 1}'s turn`);
@@ -1598,7 +1598,7 @@ function endTurn(noloop) {
         window.addEventListener('keydown', keyDown);
     }
 
-    if (!state.players[state.match.currentPlayerTurn].id && ((mpEnabled && currentPlayer.isHost) || !mpEnabled)) {
+    if (!state.players[state.match.currentPlayerTurn].id && ((mpEnabled && currentPlayer['isHost']) || !mpEnabled)) {
         // It's a bot... try to aim...?
         setTimeout(() => {
             state.players[state.match.currentPlayerTurn].angle = rand(20, 60) * state.players[state.match.currentPlayerTurn].face * -1;
@@ -1610,14 +1610,12 @@ function endTurn(noloop) {
 }
 
 function keyUp(e) {
-    console.log('keyUp', e);
     input[e.keyCode] = 0;
     if (e.keyCode === 32 && currentPlayer.ammo[currentPlayer.currentWeapon] > 0) playerShoot();
     e.preventDefault();
 }
 
 function keyDown(e) {
-    console.log('keyDown', e);
     input[e.keyCode] = 1;
     e.preventDefault();
 }
@@ -1788,8 +1786,10 @@ const lobby = {
 };
 
 function setColor(playerIndex, value) {
-    state.players[playerIndex].recolor(state.players[playerIndex].hatColor, value);
-    state.players[playerIndex].hatColor = value;
+    if (playerIndex > -1) {
+        state.players[playerIndex].recolor(state.players[playerIndex].hatColor, value);
+        state.players[playerIndex].hatColor = value;
+    }
 }
 
 function refreshPlayers(e) {
@@ -1808,18 +1808,18 @@ function refreshPlayers(e) {
 
     // Reorder users based on humans
     for(let i = 0; i < 4; i++) {
-        if (humans[i]) humans[i] = users.find(u => u.userId === humans[i]);
+        if (humans[i]) humans[i] = users.find(u => u['userId'] === humans[i]);
     }
 
     for (let i = 0; i < 4; i++) {
         const u = humans[i];
-        if (u?.isHost) {
+        if (u?.['isHost']) {
             show($('lobby-owner'));
-            state.players[i].isHost = true;
+            state.players[i]['isHost'] = true;
             $('lobby-owner').innerHTML = `${u.username}'s lobby`;
         }
         state.players[i].name = u?.username ?? uniNames[i];
-        state.players[i].id = u?.userId ?? null; // If no id, it's a BOT.
+        state.players[i].id = u?.['userId'] ?? null; // If no id, it's a BOT.
         if (u?.id === window.Wavedash.getUserId()) {
             currentPlayerIndex = i;
             $('picker').style.marginLeft = `${110 + 212 * i}px`;
@@ -1845,15 +1845,6 @@ const title = {
             if (params.lobby) {
                 show($('accept-invite'));
                 state.lobby = params.lobby;
-            }
-            else {
-                show($('lobby-id'));
-                show($('join-lobby'));
-
-                $('join-lobby').addEventListener('click', (e) => {
-                    state.lobby = $('lobby-id').value;
-                    navigateScene(lobby);
-                });
             }
         }
 
