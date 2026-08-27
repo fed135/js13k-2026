@@ -3,21 +3,24 @@
 
 This is the source project for my 2026 JS13k submission: My Little Armageddon.
 
-In this repo you'll find my original sources in the [before-optimizations](https://github.com/fed135/js13k-2026/tree/before-optimizations) branch. I built is out using classes and neat splitting of the business logic.
+In this repo you'll find my original sources in the [before-optimizations](https://github.com/fed135/js13k-2026/tree/before-optimizations) branch. I built it out using classes and neat splitting of the business logic.
 
-Once I had a fully functional and ready build I created a new branch where I then merged all the code files into one (which is what you now see in the main branch).
+Once I had a fully functional build I created a new branch in which I merged all the code files into one (which is what you now see in the main branch).
 
-~2k lines in a single file is painful to work on (happened more than once in my career tho'), which I didn't really thought would be too bad because I dodn't anticipate the need to debug much (I was wrong).
+~2k lines in a single file is painful to work on (happened more than once in my career tho'), which I didn't really thought would be too bad because I didn't anticipate the need to debug much at that stage (I was wrong).
 
 The big challenge was getting the multiplayer working right. It was sort of a stretch goal I set myself and well, didn't plan my classes accordingly from the start.
 
 Anyways, hope you enjoy!
 
 
+Note: **NO AI WAS INVOLVED IN THE MAKING OF THIS PROJECT** 
+
+
 ## To launch from source:
 
 ```
-npm run start
+npm run start:debug
 ```
 
 ## To build the compressed version:
@@ -39,7 +42,7 @@ Uploads the build to [Wavedash](https://wavedash.com/dev-portal/fed135)
 
 ## Step 1 (Build the game):
 
-
+Time: Roughly 10 hours over a 2 week period
 Size after step 1: 16kb
 
 
@@ -50,12 +53,14 @@ Size after step 1: 16kb
 - Minify HTML + CSS (~2kb estimated)
   - [Online minifier](https://j9t.github.io/html-minifier-next/)
 
+Time: 4 hours
 Size after step 2: 12.6kb
 
-## Ideas:
+## What's next?
 
-- Test out RegPack, which used to be fantastic for js1k, but uses `eval` and hasn't been updated in a little while. 
-  - Not as fantastic for larger codebases where GCC can tree-shake and perform some crazy optimizations
+I may cannibalize some pieces of this project for other code-golf challenges, but as it stands I will not be continuing development on this project.
+
+Feel free to fork it and do weird things with it! 
 
 
 ## Notes
@@ -69,3 +74,9 @@ Size after step 2: 12.6kb
   - Make the bots smarter
   - Add match options, eg: toggle wind, # of turns, # of players
   - etc.
+- Tested out RegPack, which used to be fantastic for js1k, but uses `eval` and hasn't been updated in a little while. 
+  - Not as fantastic for larger codebases where GCC can tree-shake and perform some crazy optimizations
+
+## License
+
+Apache-2.0 - 2026
