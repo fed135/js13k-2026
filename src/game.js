@@ -1569,7 +1569,7 @@ function endTurn(noloop, currentIndex) {
     state.match.shotMade = false;
     state.match.currentPlayerTurn = (currentIndex > -1 ? currentIndex : state.match.currentPlayerTurn + 1) % 4;
 
-    if (state.match.gameTimer >= config.MAX_MATCH_DURATION) return endMatch();
+    if (state.match.gameTimer > config.MAX_MATCH_DURATION) return endMatch();
 
     if (state.players[state.match.currentPlayerTurn].hp <= 0) {
         if (state.players.filter((p) => p.hp > 0).length > 1) return endTurn(noloop);
@@ -1623,7 +1623,7 @@ function keyDown(e) {
 }
 
 function endMatch() {
-    window.Wavedash.off("LobbyMessage", userAction);
+    if (mpEnabled) window.Wavedash.off("LobbyMessage", userAction);
     show($('game-over'));
     const winner = state.players.reduce((best, p) => p.hp > best.hp ? p : best);
     announcer(`Player ${winner.name} has won!`);
