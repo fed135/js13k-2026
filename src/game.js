@@ -1557,7 +1557,7 @@ function endTurn(noloop, currentIndex) {
     // if host, communicate end of turn to others
     if (mpEnabled && currentPlayer.isHost && noloop) return; // Prevent recursion
     if (mpEnabled && currentPlayer.isHost && !noloop) window.Wavedash.sendLobbyMessage(state.lobby, `${NETWORK_ACTIONS.END_TURN},${state.match.currentPlayerTurn}`);
-
+    if (state.match.scoreScreen) return;
 
     // reset hud
     window.removeEventListener('keyup', keyUp);
