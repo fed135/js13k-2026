@@ -1518,7 +1518,7 @@ function userAction(a) {
                 //4,0,384,313,45,0.6000000000000001
                 const shot = a.message.split(',');
                 const from = state.players.find(p => p.index === parseInt(shot[1]));
-                if (currentPlayer.isHost && !from.id) return; // host already knows about the shot.
+                if (currentPlayer['isHost'] && !from.id) return; // host already knows about the shot.
                 from.currentWeapon = parseInt(shot[2]);
                 from.x = parseInt(shot[3]);
                 from.y = parseInt(shot[4]);
