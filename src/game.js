@@ -1,6 +1,14 @@
 /** Main */
 
-const state = {t:0, gravity: 1};
+const state = {t:0, gravity: 1, lobby: null, id: null, username: null, terrain: null, players: [], windDirection: 0, windStrength: 0, match: {
+            gameTimer: 0,
+            currentPlayerTurn: -1,
+            turnTimer: null,
+            turnCountdown: 0,
+            shotMade: false,
+            scoreScreen: false,
+            currentMissile: null,
+        } };
 
 const N = {
         C: 32.70,
@@ -72,6 +80,7 @@ const NETWORK_ACTIONS = {
     MOVE: 6,
     INIT2: 7,
     INIT3: 8,
+    REFRESH_LOBBY: 9
 };
 
 let assets;
@@ -1338,7 +1347,6 @@ const parralax = randomPoints(64, Math.round(a.height * config.BACKGROUND_HEIGHT
 let input = {};
 
 let currentPlayer;
-let winnerSpectacle;
 
 const match = {
     loop: () => {
@@ -1375,7 +1383,7 @@ const match = {
                 var dir = input[37] ? -1 : 1;
                 currentPlayer.move(dir);
 
-                if (mpEnabled && state.t % 10 === 0) window.Wavedash.sendLobbyMessage(state.lobby, `${NETWORK_ACTIONS.MOVE},${currentPlayer.x}`);
+                if (mpEnabled && state.t % 10 === 0) window.Wavedash.sendLobbyMessage(state.lobby, `${NETWORK_ACTIONS.MOVE},${currentPlayer.x},${currentPlayer.face}`);
             }
             if (!input[37] && !input[39]) currentPlayer.changeState(Player.STATES.IDLE);
         }
@@ -1414,8 +1422,8 @@ const match = {
         ctx.rotate((state.windDirection + 90) * (Math.PI / 180));
         ctx.beginPath();
         ctx.moveTo(0,-14);
-        ctx.lineTo(12,14);
-        ctx.lineTo(-12,14);
+        ctx.lineTo(10,14);
+        ctx.lineTo(-10,14);
         ctx.closePath();
         const windGRadient = ctx.createLinearGradient(0, 0, -14, 30);
         windGRadient.addColorStop(0, "lightblue");
@@ -1429,28 +1437,18 @@ const match = {
 
         ctx.textAlign = 'center';
         ctx.font = 'normal bolder 16px sans-serif';
-        ctx.fillStyle = '#999';
+        ctx.fillStyle = state.windStrength > 15 ? '#b60' :  '#bbb';
         ctx.lineWidth = 4;
         ctx.strokeStyle = 'black';
         ctx.lineJoin = "round";
 
-        ctx.strokeText(Math.round(state.windStrength), 540, 20);
-        ctx.fillText(Math.round(state.windStrength), 540, 20);
+        ctx.strokeText('WIND: ' + Math.round(state.windStrength), 540, 20);
+        ctx.fillText('WIND: ' + Math.round(state.windStrength), 540, 20);
     },
     nav: [],
     hud: $('match'),
     bgm: () => playTrack(config.TRACKS.MATCH_START),
     load: () => {
-        state.match = {
-            gameTimer: 0,
-            currentPlayerTurn: -1,
-            turnTimer: null,
-            turnCountdown: 0,
-            shotMade: false,
-            scoreScreen: false,
-            currentMissile: null,
-        }
-
         state.terrain = new Terrain(256, Math.round(a.height * config.MATCH_FOREGROUND_OFFSET), 0.5, config.TERRAIN_ROUGHNESS, -6, 6, Math.round(a.height * config.MATCH_FOREGROUND_OFFSET), a.width * 2);
 
         currentPlayer = mpEnabled ? state.players.find(p => p.id === state.id) : state.players[0];
@@ -1467,7 +1465,6 @@ const match = {
 
         // if mp, wait for host to send the terrain coords
         if (mpEnabled) {
-            window.Wavedash.on("LobbyMessage", userAction);
 
             if (currentPlayer['isHost']) {
                 const coords = JSON.stringify(state.terrain.coords.map(c => c[0]));
@@ -1482,10 +1479,7 @@ const match = {
             endTurn();
         }
     },
-    unload: () => {
-        clearInterval(winnerSpectacle);
-        window.Wavedash.off("LobbyMessage", userAction);
-    }
+    unload: () => {}
 };
 
 let terrainChunks = '';
@@ -1506,11 +1500,14 @@ function userAction(a) {
                 state.terrain.coords = JSON.parse(terrainChunks).map(c => [c,c]);
                 break;
             case NETWORK_ACTIONS.END_TURN:
-                endTurn(true); //noloop
+                const currentIndex = parseInt(a.message.split(',')[1]);
+                endTurn(true, currentIndex); //noloop
                 break;
             case NETWORK_ACTIONS.MOVE:
                 if (a.username === currentPlayer.name) return;
-                state.players.find((p) => p.name === a.username).x = Number(a.message.substring(2));
+                const mp = state.players.find((p) => p.name === a.username);
+                mp.x = Number(a.message.split(',')[1]);
+                mp.face = Number(a.message.split(',')[2]);
                 break;
             case NETWORK_ACTIONS.WIND_CHANGE:
                 const newWind = a.message.split(',');
@@ -1520,18 +1517,22 @@ function userAction(a) {
             case NETWORK_ACTIONS.SHOT:
                 //4,0,384,313,45,0.6000000000000001
                 const shot = a.message.split(',');
-                const from = state.players[state.match.currentPlayerTurn];
-                from.currentWeapon = parseInt(shot[1]);
-                from.x = parseInt(shot[2]);
-                from.y = parseInt(shot[3]);
-                from.angle = parseInt(shot[4]);
-                from.speed = parseInt(shot[5]);
-                playerShoot(true); //noloop
+                const from = state.players.find(p => p.index === parseInt(shot[1]));
+                if (currentPlayer.isHost && !from.id) return; // host already knows about the shot.
+                from.currentWeapon = parseInt(shot[2]);
+                from.x = parseInt(shot[3]);
+                from.y = parseInt(shot[4]);
+                from.angle = parseInt(shot[5]);
+                from.speed = parseInt(shot[6]);
+                playerShoot(true, from !== currentPlayer); //noloop
+                break;
+            case NETWORK_ACTIONS.REFRESH_LOBBY:
+                refreshPlayers();
         }
 }
 
-function playerShoot(noloop) {
-    if (mpEnabled && currentPlayer['isHost'] && noloop) return; // Prevent recursion
+function playerShoot(noloop, stillProcess) {
+    if (mpEnabled && currentPlayer['isHost'] && noloop && !stillProcess) return; // Prevent recursion
 
     state.match.shotMade = true;
     //if (state.players[state.match.currentPlayerTurn].id )
@@ -1543,21 +1544,20 @@ function playerShoot(noloop) {
 
     const cp = state.players[state.match.currentPlayerTurn];
     let missile = new cp.weapons[cp.currentWeapon](Projectile.BEHAVIORS.PLAYER);
-    missile.fire(cp.x, cp.y, cp.angle, cp.speed);
+    missile.fire(parseInt(cp.x), parseInt(cp.y), parseInt(cp.angle), parseInt(cp.speed));
     state.match.currentMissile = missile;
     missile.owner = cp;
     cp.ammo[cp.currentWeapon]--;
 
     if (cp === currentPlayer) $('last-shot').style.marginLeft = `calc(${(currentPlayer.speed / 50) * 100}% - 8px)`;
-    if (mpEnabled && !noloop) window.Wavedash.sendLobbyMessage(state.lobby, `${NETWORK_ACTIONS.SHOT},${cp.currentWeapon},${cp.x},${cp.y},${cp.angle},${cp.speed}`);
+    if (mpEnabled && !noloop) window.Wavedash.sendLobbyMessage(state.lobby, `${NETWORK_ACTIONS.SHOT},${cp.index},${cp.currentWeapon},${cp.x},${cp.y},${cp.angle},${cp.speed}`);
 }
 
-function endTurn(noloop) {
+function endTurn(noloop, currentIndex) {
     // if host, communicate end of turn to others
     if (mpEnabled && currentPlayer.isHost && noloop) return; // Prevent recursion
-    if (mpEnabled && currentPlayer.isHost && !noloop) window.Wavedash.sendLobbyMessage(state.lobby, ''+NETWORK_ACTIONS.END_TURN);
+    if (mpEnabled && currentPlayer.isHost && !noloop) window.Wavedash.sendLobbyMessage(state.lobby, `${NETWORK_ACTIONS.END_TURN},${state.match.currentPlayerTurn}`);
 
-    if (state.match.gameTimer >= config.MAX_MATCH_DURATION) return endMatch();
 
     // reset hud
     window.removeEventListener('keyup', keyUp);
@@ -1567,14 +1567,16 @@ function endTurn(noloop) {
 
     state.match.gameTimer++;
     state.match.shotMade = false;
-    state.match.currentPlayerTurn = (state.match.currentPlayerTurn + 1) % 4;
+    state.match.currentPlayerTurn = (currentIndex > -1 ? currentIndex : state.match.currentPlayerTurn + 1) % 4;
+
+    if (state.match.gameTimer >= config.MAX_MATCH_DURATION) return endMatch();
 
     if (state.players[state.match.currentPlayerTurn].hp <= 0) {
         if (state.players.filter((p) => p.hp > 0).length > 1) return endTurn(noloop);
         else return endMatch();
     }
 
-    if (state.match.gameTimer === 1 || (state.match.gameTimer +1) % 4 === 0) {
+    if (state.match.gameTimer === 1 || (state.match.gameTimer +1) % 6 === 0) {
         sfx(config.S.shot, [300, 400], 5);
         state.windDirection = Math.round(rand(0, 180));
         state.windStrength = Math.round(rand(0, 30));
@@ -1605,7 +1607,7 @@ function endTurn(noloop) {
             state.players[state.match.currentPlayerTurn].speed = rand(25, 40);
 
             playerShoot();
-        }, rand(3000, 6000));
+        }, rand(2000, 3000));
     }
 }
 
@@ -1621,6 +1623,7 @@ function keyDown(e) {
 }
 
 function endMatch() {
+    window.Wavedash.off("LobbyMessage", userAction);
     show($('game-over'));
     const winner = state.players.reduce((best, p) => p.hp > best.hp ? p : best);
     announcer(`Player ${winner.name} has won!`);
@@ -1630,7 +1633,7 @@ function endMatch() {
     moveCamera([winner.x - 540, winner.y -300, 1080, 600], 20);
     winner.changeState(Player.STATES.VICTORY);
     state.match.currentPlayerTurn = winner.index;
-    winnerSpectacle = setInterval(() => {
+    setInterval(() => {
         Projectile.particleSystem(winner.x + rand(-50, 50), winner.y + rand(-50, 50), [rand(128,255), rand(128,255), rand(128,255)], 50, 500);
         winner.face *= -1;
     },1500);
@@ -1690,13 +1693,10 @@ const lobby = {
 
         printFrame();
     },
-    nav: [[$('start-match'), match]],
+    nav: [],
     hud: $('lobby'),
     bgm: () => playTrack(config.TRACKS.LOBBY),
     load: () => {
-        state.windDirection = 0;
-        state.windStrength = 0;
-        state.players = [];
         resetCamera();
         state.terrain = new Terrain(128, Math.round(a.height * config.LOBBY_FOREGROUND_OFFSET), 0.5, config.TERRAIN_ROUGHNESS, -3, 3, Math.round(a.height * config.LOBBY_FOREGROUND_OFFSET), a.width);
         hide($('lobby-owner'));
@@ -1741,11 +1741,11 @@ const lobby = {
 
                 // 2: Private
                 window.Wavedash.createLobby(2, 4).then((l) => {
-                    state.lobby = l.data;
+                    state.lobby = l['data'];
                     lobbyHost = state.players[0];
                     window.Wavedash.setLobbyData(state.lobby, 'ho', JSON.stringify([state.id]));
 
-                    window.Wavedash.getLobbyInviteLink(true).then((res) =>  { $('invite-link').value = res.data });
+                    window.Wavedash.getLobbyInviteLink(true).then((res) =>  { $('invite-link').value = res['data'] });
 
                     refreshPlayers();
                 });
@@ -1755,11 +1755,11 @@ const lobby = {
                     e.target.nextElementSibling.style.display='block';
                });
             }
-
-            $('start-match').addEventListener((e) => {
-                window.Wavedash.sendLobbyMessage(state.lobby, ''+NETWORK_ACTIONS.START_MATCH);
-            });
         }
+        $('start-match').addEventListener('click', (e) => {
+            if (mpEnabled) window.Wavedash.sendLobbyMessage(state.lobby, ''+NETWORK_ACTIONS.START_MATCH);
+            else navigateScene(match);
+        });
 
         window.updateColor = (e) => {
             let c = hexToRgb(e.target.value);
@@ -1780,7 +1780,6 @@ const lobby = {
     unload: () => {
         if (mpEnabled) {
             window.Wavedash.off("LobbyUsersUpdated", refreshPlayers);
-            window.Wavedash.off("LobbyMessage", userAction);
         }
     }
 };
@@ -1794,33 +1793,22 @@ function setColor(playerIndex, value) {
 
 function refreshPlayers(e) {
     const users = window.Wavedash.getLobbyUsers(state.lobby);
-    const humans = JSON.parse(window.Wavedash.getLobbyData(state.lobby, 'ho')); // human order
 
     // if host, we'll update the metadata
     if (e && lobbyHost) {
-        if (e.changeType === "JOINED") humans.push(e.userId);
-        else {
-            const leftIndex = humans.findIndex(id => id === e.userId);
-            if (leftIndex > -1) humans.splice(leftIndex, 1);
-        }
-        window.Wavedash.setLobbyData(state.lobby, 'ho', JSON.stringify(humans));
-    }
-
-    // Reorder users based on humans
-    for(let i = 0; i < 4; i++) {
-        if (humans[i]) humans[i] = users.find(u => u['userId'] === humans[i]);
+        window.Wavedash.sendLobbyMessage(state.lobby, ''+NETWORK_ACTIONS.REFRESH_LOBBY);
     }
 
     for (let i = 0; i < 4; i++) {
-        const u = humans[i];
+        const u = users[i];
         if (u?.['isHost']) {
             show($('lobby-owner'));
             state.players[i]['isHost'] = true;
             $('lobby-owner').innerHTML = `${u.username}'s lobby`;
         }
-        state.players[i].name = u?.username ?? uniNames[i];
+        state.players[i].name = u?.['username'] ?? uniNames[i];
         state.players[i].id = u?.['userId'] ?? null; // If no id, it's a BOT.
-        if (u?.id === window.Wavedash.getUserId()) {
+        if (u?.['userId'] === window.Wavedash.getUserId()) {
             currentPlayerIndex = i;
             $('picker').style.marginLeft = `${110 + 212 * i}px`;
         }
@@ -1842,9 +1830,9 @@ const title = {
 
             // Join MP session if in params
             const params = window.Wavedash.getLaunchParams();
-            if (params.lobby) {
+            if (params['lobby']) {
                 show($('accept-invite'));
-                state.lobby = params.lobby;
+                state.lobby = params['lobby'];
             }
         }
 
